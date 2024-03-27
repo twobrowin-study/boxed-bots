@@ -1,0 +1,63 @@
+'yes': Да
+'no':  Нет
+
+logout: Выйти
+
+done:  Выполнено
+super: Супер
+
+is_active:    Регистрация активна
+is_inactive:  Регистрация не активна
+set_inactive: Отменить регистрацию
+set_active:   Вернуть регистрацию
+
+has_been_set_inactive: Регистрация деактивирована
+has_been_set_active:   Регистрация активирована
+
+data_empty: Не заполнено
+register:   Управление регистрацией
+
+switch:        Рубильник
+groups:        Группы
+users:         Пользователи
+registration:  Параметры регистрации
+report:        Отчет
+notifications: Оповещения
+keyboard:      Клавиатура
+settings:      Настройки
+logs:          Логи
+
+key:         Ключ
+description: Описание
+value:       Значение
+
+bot_status: Статус бота
+
+on_male:         Включён
+off_male:        Выключён
+restart_planned: Назначен перезапуск
+restarting:      Перезапускается
+
+turn_on:  Включить
+turn_off: Выключить
+restart:  Перезапустить
+
+is_registration_open: Статус регистрации
+
+registration_opened: Открыта
+registration_closed: Закрыта
+
+registration_close: Закрыть регистрацию
+registration_open:  Открыть регистрацию
+
+# function:      Исполняемая функция
+# function_description: Исполняемая функция
+# text_markdown: Текст
+# send_picture
+# is_active
+
+# Поддерживается только Управление регистрацией
+# Текст
+# Картинка
+# Ссылка на диск
+# Активно?

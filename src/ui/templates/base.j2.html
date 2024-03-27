@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{ title }}</title>
+    <link rel="icon" type="image/x-icon" href="{{ uri_prefix }}/assets/favicon.ico">
+    <link href="{{ uri_prefix }}/assets/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      .container {
+        max-width: 90% !important;
+      }
+    </style>
+    <script src="{{ uri_prefix }}/assets/js/jquery-3.7.1.min.js"></script>
+    <script src="{{ uri_prefix }}/assets/js/keycloak.min.js"></script>
+    <script>
+      var keycloak = new Keycloak({
+        url:      '{{ keycloak.url }}',
+        realm:    '{{ keycloak.realm }}',
+        clientId: '{{ keycloak.ui_client }}'
+      });
+
+      try {
+        const authenticated = keycloak.init({ onLoad: 'login-required'});
+        console.log(`User is ${authenticated ? 'authenticated' : 'not authenticated'}`);
+      } catch (error) {
+        console.error('Failed to initialize adapter:', error);
+      }
+      
+      keycloak.onAuthSuccess = () => {
+        $('#content').css('display', 'block');
+        $('#user-name').text(keycloak.tokenParsed.name);
+        $('#logout').click(() => keycloak.logout());
+      }
+    </script>
+  </head>
+  <body>
+    <div id="content" class="container" style="display: none;">
+      <div class="position-absolute top-0 end-0" style="padding-right: 2em; padding-top: 0.5em;">
+        <span id="user-name" style="vertical-align: middle;"></span>
+        <button class="btn btn-primary btn-sm m-1" id="logout">{{ i18n.logout }}</button>
+      </div>
+      <h1>{{ title }}</h1>
+      <hr>
+      <div>
+        <a href="{{ uri_prefix }}/status" class="btn btn-primary mr-1">{{ i18n.bot_status }}</a>
+        <a href="{{ uri_prefix }}/settings" class="btn btn-primary mr-1">{{ i18n.settings }}</a>
+      </div>
+      <hr>
+      {% block content %}{% endblock %}
+    </div>
+  </body>
+</html>

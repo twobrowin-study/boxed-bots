@@ -1,0 +1,114 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table class="table">
+    <tr>
+      <th>{{ i18n.bot_status }}</th>
+      <td>
+        {% if bot_status.bot_status == BotStatusEnum.ON %}
+          {{ i18n.on_male }}
+        {% elif bot_status.bot_status == BotStatusEnum.OFF %}
+          {{ i18n.off_male }}
+        {% elif bot_status.bot_status == BotStatusEnum.RESTART %}
+          {{ i18n.restart_planned }}
+        {% elif bot_status.bot_status == BotStatusEnum.RESTARTING %}
+          {{ i18n.restarting }}
+        {% endif %}
+      </td>
+      <td>
+        <button class="bot-action btn 
+        
+        {% if bot_status.bot_status == BotStatusEnum.ON %}
+          btn-danger
+        {% elif bot_status.bot_status == BotStatusEnum.OFF %}
+          btn-success
+        {% else %}
+          btn-success
+        {% endif %}
+        
+        btn-sm m-1"
+
+        {% if bot_status.bot_status == BotStatusEnum.ON %}
+          action="turn_off"
+        {% elif bot_status.bot_status == BotStatusEnum.OFF %}
+          action="turn_on"
+        {% else %}
+          action="none"
+        {% endif %}
+
+        {% if bot_status.bot_status not in [BotStatusEnum.ON, BotStatusEnum.OFF] %}disabled{% endif %}>
+          {% if bot_status.bot_status == BotStatusEnum.ON %}
+            {{ i18n.turn_off }}
+          {% elif bot_status.bot_status == BotStatusEnum.OFF %}
+            {{ i18n.turn_on }}
+          {% else %}
+            {{ i18n.turn_on }}
+          {% endif %}
+        </button>
+        <button class="bot-action btn btn-primary btn-sm m-1"
+
+        {% if bot_status.bot_status == BotStatusEnum.ON %}
+          action="restart"
+        {% else %}
+          action="none"
+        {% endif %}
+
+        {% if bot_status.bot_status != BotStatusEnum.ON %}disabled{% endif %}>
+          {{ i18n.restart }}
+        </button>
+      </td>
+    </tr>
+    <tr>
+      <th>{{ i18n.is_registration_open }}</th>
+      <td>
+        {% if bot_status.is_registration_open %}
+          {{ i18n.registration_opened }}
+        {% else %}
+          {{ i18n.registration_closed }}
+        {% endif %}
+      </td>
+      <td>
+        <button class="bot-action btn 
+        
+        {% if bot_status.is_registration_open %}
+          btn-warning
+        {% else %}
+          btn-success
+        {% endif %}
+
+        btn-sm m-1"
+        
+        {% if bot_status.is_registration_open %}
+          action="deactivate_registration"
+        {% else %}
+          action="activate_registration"
+        {% endif %}
+
+        >
+          {% if bot_status.is_registration_open %}
+            {{ i18n.registration_close }}
+          {% else %}
+            {{ i18n.registration_open }}
+          {% endif %}
+        </button>
+      </td>
+    </tr>
+  </table>
+
+  <script>
+    $(() => {
+      $('.bot-action').click((elem) => {
+        let button = elem.delegateTarget;
+        $.ajax({
+          url:  `{{ uri_prefix }}/bot?action=${button.getAttribute('action')}`,
+          type: 'POST',
+          headers: {
+            Accept:        "application/json",
+            Authorization: `Bearer ${keycloak.token}`
+          },
+          success: () => location.reload()
+        })
+      })
+    })
+  </script>
+{% endblock %}
