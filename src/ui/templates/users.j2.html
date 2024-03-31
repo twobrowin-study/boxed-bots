@@ -4,19 +4,61 @@
   <table id="data" class="table table-striped">
     <thead>
       <tr>
-        <th>{{ i18n.key }}</th>
-        <th>{{ i18n.description }}</th>
-        <th>{{ i18n.value }}</th>
+        <th>{{ i18n.username }}</th>
+        {% for field in fields %}
+          <th id='field-{{ field.id }}'>{{ field.key }}</th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
-      {% for setting in settings %}
-        <tr id="{{ setting.key }}">
-          <td id="{{ setting.key }}-key"         >{{ setting.key }}</td>
-          <td id="{{ setting.key }}-description" ><span style="white-space: pre-line">{{ setting.description }}</span></td>
-          <td id="{{ setting.key }}-value"       ><span style="white-space: pre-line">{{ setting.value }}</span></td>
+      {% for user in users %}
+        <tr id="user-{{ user.id }}">
+          <td id="user-{{ user.id }}-username">{{ user.username }}</td>
+          {% for field in fields %}
+            {% set field_id = 'field-' + (field.id | string) %}
+            <td id='user-{{ user.id }}-field-{{ field.id }}'>
+              {% if field_id in user %}
+                {% if not user[field_id].document_bucket %}
+                  {{ user[field_id].value }}
+                {% else %}
+                  <img
+                    id='user-{{ user.id }}-field-{{ field.id }}-image'
+                    class="img-thumbnail"
+                    alt="{{ user[field_id].value }}"
+                    style="max-height: 200px; max-width: 200px;"
+                  />
+                {% endif %}
+              {% endif %}
+            </td>
+          {% endfor %}
         </tr>
       {% endfor %}
     </tbody>
   </table>
+
+  <script>
+    $(() => {
+      setTimeout(() => {
+        {% for user in users %}
+            {% for field in fields %}
+              {% set field_id = 'field-' + (field.id | string) %}
+                {% if field_id in user and user[field_id].document_bucket %}
+                  $.ajax({
+                    url:  `{{ uri_prefix }}/minio/base64/{{ user[field_id].document_bucket }}/{{ user[field_id].value }}`,
+                    type: 'GET',
+                    headers: {
+                      Accept:        "application/json",
+                      Authorization: `Bearer ${keycloak.token}`
+                    },
+                    success: (res) => {
+                      $('#user-{{ user.id }}-field-{{ field.id }}-image')
+                      .attr('src', `data:${res.mime};base64,${res.image}`);
+                    }
+                  });
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+      }, 500);
+    });
+  </script>
 {% endblock %}

@@ -137,6 +137,8 @@ class I18n(BaseModel, extra="forbid"):
     registration_close:   str
     registration_open:    str
 
+    username: str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния

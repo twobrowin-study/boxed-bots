@@ -1,5 +1,6 @@
 from fastapi import Request, Depends
 from fastapi.responses import (
+    Response,
     PlainTextResponse,
     HTMLResponse,
     RedirectResponse,
@@ -8,14 +9,18 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_302_FOUND
 
-from sqlalchemy import update
+import httpx
+import base64
+
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from loguru import logger
 
-from utils.db_model import BotStatus
+from utils.db_model import BotStatus, User, Field, UserFieldValue
 from utils.custom_types import (
-    BotStatusEnum
+    BotStatusEnum,
+    FieldStatusEnum
 )
 
 from ui.setup import app, prefix_router, provider
@@ -73,6 +78,71 @@ async def set_bot_status(action: str) -> JSONResponse:
             await session.rollback()
             logger.error("Did not set BotStatus table...")
             return JSONResponse({'error': True}, status_code=500)
+
+@prefix_router.get("/users", tags=["users"])
+async def settings(request: Request) -> HTMLResponse:
+    """
+    Показывает пользователей
+    """
+
+    async with provider.db_session() as session:
+        fields_selected = await session.execute(
+            select(Field)
+            .where(Field.status == FieldStatusEnum.MAIN)
+            .order_by(Field.id.asc())
+        )
+        fields = list(fields_selected.scalars())
+
+        users_selected = await session.execute(
+            select(User)
+            .order_by(User.id.asc())
+        )
+        users = users_selected.scalars()
+
+        users_field_values = [
+            {
+                'id': user.id,
+                'chat_id': user.chat_id,
+                'username': user.username
+            } | {
+                f"field-{field_value.field_id}": {
+                    'value': field_value.value,
+                    'document_bucket': field_value.field.document_bucket
+                }
+                for field_value in user.fields_values
+            }
+            for user in users
+        ]
+
+        return template(
+            request=request, template_name="users.j2.html",
+            additional_context = {
+                'title': provider.config.i18n.users,
+                'fields': fields,
+                'users': users_field_values
+            }
+        )
+
+@prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
+async def settings(bucket: str, filename: str) -> Response:
+    """
+    Прокси к minio
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"http://localhost:9000/{bucket}/{filename}")
+    return Response(content=response.content, headers=response.headers, status_code=response.status_code)
+
+@prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio-base64"], dependencies=[Depends(verify_token)])
+async def settings(bucket: str, filename: str) -> Response:
+    """
+    Прокси к minio
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"http://localhost:9000/{bucket}/{filename}")
+    return JSONResponse(content = {
+        'image': base64.b64encode(response.content).decode(),
+        'mime':  response.headers['content-type']
+    })
 
 @prefix_router.get("/settings", tags=["settings"])
 async def settings(request: Request) -> HTMLResponse:

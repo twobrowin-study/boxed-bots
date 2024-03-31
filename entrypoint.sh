@@ -30,17 +30,19 @@ exec start-stop-daemon --start --chuid "${PG_USER}:${PG_USER}" --exec "${PG_BIND
 echo "Starting MINIO ${MINIO_RELEASE}..."
 exec start-stop-daemon --start --chuid "${MINIO_USER}:${MINIO_USER}" --exec "${MINIO_BINARY}" -- server ${MINIO_DATADIR} --console-address ":9001" &
 
-########################################
-# UI: launch
-########################################
-echo "Starting Box UI..."
-exec start-stop-daemon --start --chuid "${BOT_UI_USER}:${BOT_UI_USER}" --exec "${BOX_BOT_HOME}/box-bot" -- ui 1 &
+if [ "${START_SERVICES}" = "true" ]; then
+  ########################################
+  # UI: launch
+  ########################################
+  echo "Starting Box UI..."
+  exec start-stop-daemon --start --chuid "${BOT_UI_USER}:${BOT_UI_USER}" --exec "${BOX_BOT_HOME}/box-bot" -- ui 1 &
 
-# ########################################
-# # TG: launch
-# ########################################
-echo "Starting Box TG..."
-exec start-stop-daemon --start --chuid "${BOT_TG_USER}:${BOT_TG_USER}" --exec "${BOX_BOT_HOME}/box-bot" -- bot 3 &
+  # ########################################
+  # # TG: launch
+  # ########################################
+  echo "Starting Box TG..."
+  exec start-stop-daemon --start --chuid "${BOT_TG_USER}:${BOT_TG_USER}" --exec "${BOX_BOT_HOME}/box-bot" -- bot 3 &
+fi
 
 while :; do
   sleep 100

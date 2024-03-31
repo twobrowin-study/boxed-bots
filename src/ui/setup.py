@@ -19,13 +19,25 @@ tags_metadata = [
         "description": "Управление состоянием бота",
     },
     {
+        "name": "users",
+        "description": "Показывает страницу всех пользователей",
+    },
+    {
+        "name": "minio",
+        "description": "Прокси к minio",
+    },
+    {
+        "name": "minio-base64",
+        "description": "Прокси к minio, который передаёт файлы в формате base64",
+    },
+    {
         "name": "settings",
         "description": "Получить настройки приложения",
     },
     {
         "name": "healz",
         "description": "Отвечает если приложение живо",
-    }
+    },
 ]
 
 provider = UIProvider()

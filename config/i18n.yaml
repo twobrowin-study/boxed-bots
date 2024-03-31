@@ -50,6 +50,8 @@ registration_closed: Закрыта
 registration_close: Закрыть регистрацию
 registration_open:  Открыть регистрацию
 
+username: Имя пользователя Телеграм
+
 # function:      Исполняемая функция
 # function_description: Исполняемая функция
 # text_markdown: Текст
