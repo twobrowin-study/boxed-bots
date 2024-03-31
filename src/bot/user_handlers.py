@@ -73,6 +73,10 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
+    if update.edited_message:
+        settings = await app.provider.settings
+        return await update.effective_message.reply_markdown(settings.edited_message_reply)
+
     async with app.provider.db_session() as session:
         user       = await _get_user_by_chat_id_or_none(session, chat_id)
         settings   = await app.provider.get_settings(session)
@@ -149,6 +153,10 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
+    if update.edited_message:
+        settings = await app.provider.settings
+        return await update.effective_message.reply_markdown(settings.edited_message_reply)
+
     async with app.provider.db_session() as session:
         user     = await _get_user_by_chat_id_or_none(session, chat_id)
         settings = await app.provider.get_settings(session)
@@ -204,9 +212,10 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
             await session.execute(
                 insert(UserFieldValue)
                 .values(
-                    user_id  = user.id,
-                    field_id = curr_field.id,
-                    value    = update.message.text_markdown_urled
+                    user_id    = user.id,
+                    field_id   = curr_field.id,
+                    value      = update.message.text_markdown_urled,
+                    message_id = update.message.id
                 )
             )
             
@@ -245,6 +254,10 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
     app: BBApplication = context.application
     chat_id  = update.effective_user.id
     username = update.effective_user.username
+
+    if update.edited_message:
+        settings = await app.provider.settings
+        return await update.effective_message.reply_markdown(settings.edited_message_reply)
 
     async with app.provider.db_session() as session:
         user     = await _get_user_by_chat_id_or_none(session, chat_id)
@@ -316,9 +329,10 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
             await session.execute(
                 insert(UserFieldValue)
                 .values(
-                    user_id  = user.id,
-                    field_id = curr_field.id,
-                    value    = full_filename
+                    user_id    = user.id,
+                    field_id   = curr_field.id,
+                    value      = full_filename,
+                    message_id = update.message.id
                 )
             )
 

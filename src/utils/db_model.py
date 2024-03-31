@@ -1,7 +1,8 @@
 from sqlalchemy import (
     Column,
     ForeignKey,
-    Integer
+    Integer,
+    BigInteger
 )
 from sqlalchemy.orm import (
     MappedAsDataclass, 
@@ -44,7 +45,7 @@ class Group(Base):
     __tablename__ = "groups"
 
     id:          Mapped[int]             = mapped_column(primary_key=True, nullable=False)
-    chat_id:     Mapped[int]             = mapped_column(nullable=False,   index=True, unique=True)
+    chat_id:     Mapped[int]             = mapped_column(nullable=False,   index=True, unique=True, type_=BigInteger)
     status:      Mapped[GroupStatusEnum] = mapped_column(nullable=False,   default=GroupStatusEnum.INACTIVE)
     description: Mapped[str|None]        = mapped_column(default=None)
 
@@ -73,7 +74,7 @@ class User(Base):
 
     id:        Mapped[int]      = mapped_column(primary_key=True, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(nullable=False)
-    chat_id:   Mapped[int]      = mapped_column(nullable=False, index=True, unique=True)
+    chat_id:   Mapped[int]      = mapped_column(nullable=False, index=True, unique=True, type_=BigInteger)
     username:  Mapped[str|None] = mapped_column(default=None)
     
     status:          Mapped[UserStatusEnum] = mapped_column(nullable=False, default=UserStatusEnum.INACTIVE)
@@ -97,6 +98,8 @@ class UserFieldValue(Base):
     field_id = Column(Integer, ForeignKey(Field.id), nullable=False)
 
     value: Mapped[str] = mapped_column(nullable=False)
+    
+    message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
 
     field = relationship('Field', lazy='selectin')
 

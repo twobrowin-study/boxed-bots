@@ -1,0 +1,22 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="data" class="table table-striped">
+    <thead>
+      <tr>
+        <th>{{ i18n.key }}</th>
+        <th>{{ i18n.description }}</th>
+        <th>{{ i18n.value }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for setting in settings %}
+        <tr id="{{ setting.key }}">
+          <td id="{{ setting.key }}-key"         >{{ setting.key }}</td>
+          <td id="{{ setting.key }}-description" ><span style="white-space: pre-line">{{ setting.description }}</span></td>
+          <td id="{{ setting.key }}-value"       ><span style="white-space: pre-line">{{ setting.value }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
