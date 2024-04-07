@@ -13,48 +13,60 @@
           {{ i18n.restart_planned }}
         {% elif bot_status.bot_status == BotStatusEnum.RESTARTING %}
           {{ i18n.restarting }}
+          {% elif bot_status.bot_status == BotStatusEnum.SERVICE %}
+            {{ i18n.service_mode }}
         {% endif %}
       </td>
       <td>
-        <button class="bot-action btn 
-        
-        {% if bot_status.bot_status == BotStatusEnum.ON %}
-          btn-danger
-        {% elif bot_status.bot_status == BotStatusEnum.OFF %}
-          btn-success
-        {% else %}
-          btn-success
-        {% endif %}
-        
-        btn-sm m-1"
+        <button 
+          {% set turn_off_enabled = (bot_status.bot_status == BotStatusEnum.ON) %}
+          {% set turn_on_enabled  = (bot_status.bot_status == BotStatusEnum.OFF) %}
 
-        {% if bot_status.bot_status == BotStatusEnum.ON %}
-          action="turn_off"
-        {% elif bot_status.bot_status == BotStatusEnum.OFF %}
-          action="turn_on"
-        {% else %}
-          action="none"
-        {% endif %}
+          class="bot-action btn 
+          
+            {% if turn_off_enabled %}
+              btn-danger
+            {% elif turn_on_enabled %}
+              btn-success
+            {% else %}
+              btn-success
+            {% endif %}
+          
+            btn-sm m-1"
 
-        {% if bot_status.bot_status not in [BotStatusEnum.ON, BotStatusEnum.OFF] %}disabled{% endif %}>
-          {% if bot_status.bot_status == BotStatusEnum.ON %}
-            {{ i18n.turn_off }}
-          {% elif bot_status.bot_status == BotStatusEnum.OFF %}
-            {{ i18n.turn_on }}
+          {% if turn_off_enabled %}
+            action="turn_off"
+          {% elif turn_on_enabled %}
+            action="turn_on"
           {% else %}
-            {{ i18n.turn_on }}
+            action="none"
           {% endif %}
+
+          {% if not (turn_off_enabled or turn_on_enabled) %}disabled{% endif %}
+        >
+            {% if turn_off_enabled %}
+              {{ i18n.turn_off }}
+            {% elif turn_on_enabled %}
+              {{ i18n.turn_on }}
+            {% else %}
+              {{ i18n.turn_on }}
+            {% endif %}
         </button>
+        
         <button class="bot-action btn btn-primary btn-sm m-1"
+          {% set restart_enabled = (bot_status.bot_status in [BotStatusEnum.ON, BotStatusEnum.SERVICE]) %}
+          {% if restart_enabled %}action="restart"{% else %}action="none"{% endif %}
+          {% if not restart_enabled %}disabled{% endif %}
+        >
+          {{ i18n.restart_normal }}
+        </button>
 
-        {% if bot_status.bot_status == BotStatusEnum.ON %}
-          action="restart"
-        {% else %}
-          action="none"
-        {% endif %}
-
-        {% if bot_status.bot_status != BotStatusEnum.ON %}disabled{% endif %}>
-          {{ i18n.restart }}
+        <button class="bot-action btn btn-warning btn-sm m-1"
+          {% set service_enabled = (bot_status.bot_status == BotStatusEnum.ON) %}
+          {% if service_enabled %}action="service"{% else %}action="none"{% endif %}
+          {% if not service_enabled %}disabled{% endif %}
+        >
+          {{ i18n.restart_service }}
         </button>
       </td>
     </tr>
@@ -70,20 +82,19 @@
       <td>
         <button class="bot-action btn 
         
-        {% if bot_status.is_registration_open %}
-          btn-warning
-        {% else %}
-          btn-success
-        {% endif %}
+            {% if bot_status.is_registration_open %}
+              btn-warning
+            {% else %}
+              btn-success
+            {% endif %}
 
-        btn-sm m-1"
+          btn-sm m-1"
         
-        {% if bot_status.is_registration_open %}
-          action="deactivate_registration"
-        {% else %}
-          action="activate_registration"
-        {% endif %}
-
+          {% if bot_status.is_registration_open %}
+            action="deactivate_registration"
+          {% else %}
+            action="activate_registration"
+          {% endif %}
         >
           {% if bot_status.is_registration_open %}
             {{ i18n.registration_close }}

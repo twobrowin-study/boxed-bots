@@ -126,10 +126,12 @@ class I18n(BaseModel, extra="forbid"):
     off_male:        str
     restart_planned: str
     restarting:      str
+    service_mode:    str
 
-    turn_on:  str
-    turn_off: str
-    restart:  str
+    turn_on:         str
+    turn_off:        str
+    restart_normal:  str
+    restart_service: str
     
     is_registration_open: str
     registration_opened:  str

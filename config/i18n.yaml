@@ -37,10 +37,12 @@ on_male:         Включён
 off_male:        Выключён
 restart_planned: Назначен перезапуск
 restarting:      Перезапускается
+service_mode:    Сервисный режим
 
-turn_on:  Включить
-turn_off: Выключить
-restart:  Перезапустить
+turn_on:         Включить
+turn_off:        Выключить
+restart_normal:  Перезапустить в нормальный режим
+restart_service: Перезапустить в сервисный режим
 
 is_registration_open: Статус регистрации
 

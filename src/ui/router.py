@@ -67,6 +67,8 @@ async def set_bot_status(action: str) -> JSONResponse:
             await session.execute(update(BotStatus).values(bot_status = BotStatusEnum.ON))
         elif action == 'restart':
             await session.execute(update(BotStatus).values(bot_status = BotStatusEnum.RESTART))
+        elif action == 'service':
+            await session.execute(update(BotStatus).values(bot_status = BotStatusEnum.SERVICE))
         elif action == 'activate_registration':
             await session.execute(update(BotStatus).values(is_registration_open = True))
         elif action == 'deactivate_registration':
