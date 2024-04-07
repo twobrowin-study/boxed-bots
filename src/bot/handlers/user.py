@@ -2,12 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
-from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy import (
-    select,
-    insert,
-    update as sql_udate,
-)
+from sqlalchemy import insert, update as sql_udate
 
 from datetime import datetime
 from loguru import logger
@@ -15,55 +10,40 @@ from loguru import logger
 from io import BytesIO
 import filetype
 
-from utils.db_model import User, Field, UserFieldValue
-from utils.custom_types import UserStatusEnum, FieldStatusEnum
+from utils.db_model import (
+    User,
+    Field,
+    UserFieldValue
+)
+from utils.custom_types import (
+    UserStatusEnum,
+    FieldStatusEnum,
+    KeyboardKeyStatusEnum
+)
 
 from bot.application import BBApplication
 
-from bot.helpers import (
-    construct_keyboard_reply,
-    get_keyboard_to_user,
-    get_keyboard_key_obj_by_key_text,
+from bot.helpers.user import (
+    get_user_by_chat_id_or_none
+)
+from bot.helpers.fields import (
+    get_first_field_question,
+    get_next_field_question_in_branch,
     get_user_field_value_by_key,
-    get_first_user_field_question,
-    get_next_field_question_in_branch
+)
+from bot.helpers.keyboards import (
+    construct_keyboard_reply,
+    get_keyboard_of_user,
+    get_keyboard_key_by_key_text
 )
 
-async def _user_set_have_banned_bot(app: BBApplication, chat_id: int, have_banned_bot: bool) -> None:
-    """
-    Установить статус пользователя о бане бота
-    """
-    async with app.provider.db_session() as session:
-        await session.execute(
-            sql_udate(User).
-            where(User.chat_id == chat_id).
-            values(have_banned_bot = have_banned_bot)
-        )
-        await session.commit()
+# CALLBACK_USER_SET_INACTIVE         = 'user_set_inactive'
+# CALLBACK_USER_SET_ACTIVE           = 'user_set_active'
+# CALLBACK_USER_ACTIVE_STATE_PATTERN = 'user_set_(in|)active'
 
-async def _get_user_by_chat_id_or_none(session: AsyncSession, chat_id: int) -> User|None:
-    """
-    Получить пользователя или ничего если пользователя не существует
-    """
-    selection = await session.execute(
-        select(User).where(User.chat_id == chat_id)
-    )
-    user = selection.one_or_none()
-    if not user:
-        return None
-    return user.t[0]
-
-async def user_banned_bot(app: BBApplication, chat_id: int) -> None:
-    """
-    Статус пользователя, забанившего бота
-    """
-    await _user_set_have_banned_bot(app=app, chat_id=chat_id, have_banned_bot=True)
-
-async def user_unbanned_bot(app: BBApplication, chat_id: int) -> None:
-    """
-    Статус пользователя, разбанившего пользвателя
-    """
-    await _user_set_have_banned_bot(app=app, chat_id=chat_id, have_banned_bot=False)
+# CALLBACK_USER_CHANGE_STATE_PREFIX   = 'user_change_'
+# CALLBACK_USER_CHANGE_STATE_TEMPLATE = 'user_change_{state}'
+# CALLBACK_USER_CHANGE_STATE_PATTERN  = 'user_change_.*'
 
 async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -73,12 +53,8 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
-    if update.edited_message:
-        settings = await app.provider.settings
-        return await update.effective_message.reply_markdown(settings.edited_message_reply)
-
     async with app.provider.db_session() as session:
-        user       = await _get_user_by_chat_id_or_none(session, chat_id)
+        user       = await get_user_by_chat_id_or_none(session, chat_id)
         settings   = await app.provider.get_settings(session)
         bot_status = await app.provider.get_bot_status(session)
 
@@ -88,7 +64,7 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
         
         if not user:
             logger.info(f"Got start/help command from new user {chat_id=} and {username=}")
-            first_question = await get_first_user_field_question(session, settings)
+            first_question = await get_first_field_question(session, settings)
             await update.message.reply_markdown(
                 settings.start_template.format(
                     template = first_question.question_markdown
@@ -133,7 +109,7 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
                     settings.help_user_template.format(
                         template = settings.help_restart_on_registration_complete
                     ),
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
 
             if not curr_field and entity.endswith(app.START_COMMAND):
@@ -142,7 +118,7 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
                     settings.restart_user_template.format(
                         template = settings.help_restart_on_registration_complete
                     ),
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
 
 async def user_message_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -153,12 +129,8 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
-    if update.edited_message:
-        settings = await app.provider.settings
-        return await update.effective_message.reply_markdown(settings.edited_message_reply)
-
     async with app.provider.db_session() as session:
-        user     = await _get_user_by_chat_id_or_none(session, chat_id)
+        user     = await get_user_by_chat_id_or_none(session, chat_id)
         settings = await app.provider.get_settings(session)
 
         if not user:
@@ -196,7 +168,7 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
                 ))
                 await update.message.reply_markdown(
                     settings.registration_complete,
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
                 
                 user_update = {'curr_field_id': None}
@@ -221,28 +193,38 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
             
             return await session.commit()
 
-        keyboard_key = await get_keyboard_key_obj_by_key_text(session, update.message.text)
+        keyboard_key = await get_keyboard_key_by_key_text(session, update.message.text)
         
         if keyboard_key:
             logger.info(f"Got keyboard key heat from user {chat_id=} and {username=} {keyboard_key.key=}")
 
+            if keyboard_key.status == KeyboardKeyStatusEnum.ME:
+                users_field_values = {
+                    field_value.field_id: {
+                        'key':   field_value.field.key,
+                        'value': field_value.value
+                    }
+                    for field_value in user.fields_values
+                }
+                print(sorted(users_field_values))
+
             if keyboard_key.photo_link in [None, '']:
                 return await update.message.reply_markdown(
                     keyboard_key.text_markdown,
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
             elif keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) <= 1024:
                 return await update.message.reply_photo(
                     keyboard_key.photo_link,
                     caption = keyboard_key.text_markdown,
-                    reply_markup = await get_keyboard_to_user(session, user),
+                    reply_markup = await get_keyboard_of_user(session, user),
                     parse_mode = ParseMode.MARKDOWN
                 )
             elif keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) > 1024:
                 await update.message.reply_photo(keyboard_key.photo_link)
                 return await update.message.reply_markdown(
                     keyboard_key.text_markdown,
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
         
         logger.warning(f"Got unknown text message from user {chat_id=} and {username=}")
@@ -260,7 +242,7 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
         return await update.effective_message.reply_markdown(settings.edited_message_reply)
 
     async with app.provider.db_session() as session:
-        user     = await _get_user_by_chat_id_or_none(session, chat_id)
+        user     = await get_user_by_chat_id_or_none(session, chat_id)
         settings = await app.provider.get_settings(session)
 
         if not user:
@@ -298,7 +280,7 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                 ))
                 await update.message.reply_markdown(
                     settings.registration_complete,
-                    reply_markup = await get_keyboard_to_user(session, user)
+                    reply_markup = await get_keyboard_of_user(session, user)
                 )
                 
                 user_update = {'curr_field_id': None}

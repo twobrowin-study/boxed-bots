@@ -15,16 +15,15 @@
         <tr id="user-{{ user.id }}">
           <td id="user-{{ user.id }}-username">{{ user.username }}</td>
           {% for field in fields %}
-            {% set field_id = 'field-' + (field.id | string) %}
             <td id='user-{{ user.id }}-field-{{ field.id }}'>
               {% if field_id in user %}
-                {% if not user[field_id].document_bucket %}
-                  {{ user[field_id].value }}
+                {% if not user.fields[field_id].document_bucket %}
+                  {{ user.fields[field_id].value }}
                 {% else %}
                   <img
                     id='user-{{ user.id }}-field-{{ field.id }}-image'
                     class="img-thumbnail"
-                    alt="{{ user[field_id].value }}"
+                    alt="{{ user.fields[field_id].value }}"
                     style="max-height: 200px; max-width: 200px;"
                   />
                 {% endif %}
@@ -41,19 +40,33 @@
       setTimeout(() => {
         {% for user in users %}
             {% for field in fields %}
-              {% set field_id = 'field-' + (field.id | string) %}
-                {% if field_id in user and user[field_id].document_bucket %}
+                {% if field_id in user and user.fields[field_id].document_bucket %}
+                  const doc_id = '#user-{{ user.id }}-field-{{ field.id }}-image'
                   $.ajax({
-                    url:  `{{ uri_prefix }}/minio/base64/{{ user[field_id].document_bucket }}/{{ user[field_id].value }}`,
+                    url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field_id].document_bucket }}/{{ user.fields[field_id].value }}`,
                     type: 'GET',
+                    tryCount:   0,
+                    retryLimit: 3,
                     headers: {
                       Accept:        "application/json",
                       Authorization: `Bearer ${keycloak.token}`
                     },
                     success: (res) => {
-                      $('#user-{{ user.id }}-field-{{ field.id }}-image')
-                      .attr('src', `data:${res.mime};base64,${res.image}`);
-                    }
+                      $(doc_id).attr('src', `data:${res.mime};base64,${res.image}`);
+                    },
+                    error : function(xhr, textStatus, errorThrown ) {
+                      if (textStatus == 'timeout') {
+                          this.tryCount++;
+                          if (this.tryCount <= this.retryLimit) {
+                              console.log(`Retrying get document ${doc_id}`);
+                              setTimeout(() => $.ajax(this), 500);
+                              return;
+                          }
+                          console.log(`Could not retry anymore to get document ${doc_id}`);
+                          return;
+                      }
+                      console.log(`Got ${xhr.status} error for document ${doc_id}`)
+                  }
                   });
                 {% endif %}
             {% endfor %}

@@ -9,7 +9,6 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_302_FOUND
 
-import httpx
 import base64
 
 from sqlalchemy import select, update
@@ -17,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from loguru import logger
 
-from utils.db_model import BotStatus, User, Field, UserFieldValue
+from utils.db_model import BotStatus, User, Field
 from utils.custom_types import (
     BotStatusEnum,
     FieldStatusEnum
@@ -27,6 +26,11 @@ from ui.setup import app, prefix_router, provider
 from ui.helpers import verify_token, template
 
 app.mount(f"{provider.config.path_prefix}/assets", StaticFiles(directory=f"{provider.config.box_bot_home}/src/ui/assets"), name="assets")
+
+
+####################################################################################################
+# Bot status
+####################################################################################################
 
 @prefix_router.get("/", tags=['status'])
 async def root() -> RedirectResponse:
@@ -41,7 +45,6 @@ async def status(request: Request) -> HTMLResponse:
     Показывает текущий статус работы бота
     """
     bot_status = await provider.bot_status
-
     return template(
         request=request, template_name="status.j2.html",
         additional_context = {
@@ -51,7 +54,7 @@ async def status(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/bot", tags=["bot"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/bot", tags=["status"], dependencies=[Depends(verify_token)])
 async def set_bot_status(action: str) -> JSONResponse:
     """
     Устанавливает статус работы бота
@@ -79,12 +82,16 @@ async def set_bot_status(action: str) -> JSONResponse:
             logger.error("Did not set BotStatus table...")
             return JSONResponse({'error': True}, status_code=500)
 
+
+####################################################################################################
+# Users
+####################################################################################################
+
 @prefix_router.get("/users", tags=["users"])
 async def settings(request: Request) -> HTMLResponse:
     """
     Показывает пользователей
     """
-
     async with provider.db_session() as session:
         fields_selected = await session.execute(
             select(Field)
@@ -97,52 +104,45 @@ async def settings(request: Request) -> HTMLResponse:
             select(User)
             .order_by(User.id.asc())
         )
-        users = users_selected.scalars()
-
-        users_field_values = [
-            {
-                'id': user.id,
-                'chat_id': user.chat_id,
-                'username': user.username
-            } | {
-                f"field-{field_value.field_id}": {
-                    'value': field_value.value,
-                    'document_bucket': field_value.field.document_bucket
-                }
-                for field_value in user.fields_values
-            }
-            for user in users
-        ]
-
+        users = [ user.to_dict() for user in users_selected.scalars() ]
+        
         return template(
             request=request, template_name="users.j2.html",
             additional_context = {
                 'title': provider.config.i18n.users,
                 'fields': fields,
-                'users': users_field_values
+                'users': users
             }
         )
+
+
+####################################################################################################
+# MINIO
+####################################################################################################
 
 @prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
 async def settings(bucket: str, filename: str) -> Response:
     """
     Прокси к minio
     """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"http://localhost:9000/{bucket}/{filename}")
+    response = await provider.minio.proxy_content(bucket, filename)
     return Response(content=response.content, headers=response.headers, status_code=response.status_code)
 
-@prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio-base64"], dependencies=[Depends(verify_token)])
+@prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
 async def settings(bucket: str, filename: str) -> Response:
     """
-    Прокси к minio
+    Прокси к minio, который возвращает ответ в формате base64
     """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"http://localhost:9000/{bucket}/{filename}")
+    response = await provider.minio.proxy_content(bucket, filename)
     return JSONResponse(content = {
         'image': base64.b64encode(response.content).decode(),
         'mime':  response.headers['content-type']
     })
+
+
+####################################################################################################
+# Settings
+####################################################################################################
 
 @prefix_router.get("/settings", tags=["settings"])
 async def settings(request: Request) -> HTMLResponse:
@@ -150,7 +150,6 @@ async def settings(request: Request) -> HTMLResponse:
     Показывает настройки бота
     """
     curr_settings = await provider.settings
-
     settings_with_description = [
         {
             'key': key,
@@ -159,7 +158,6 @@ async def settings(request: Request) -> HTMLResponse:
         }
         for key,default_dict in provider.config.defaults.model_dump().items()
     ]
-
     return template(
         request=request, template_name="settings.j2.html",
         additional_context = {
@@ -168,7 +166,12 @@ async def settings(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.get(f"/healz", tags=["healz"])
+
+####################################################################################################
+# Healthz
+####################################################################################################
+
+@prefix_router.get(f"/healthz", tags=["healthz"])
 async def healz() -> PlainTextResponse:
     """
     Возвращает состояние сервера

@@ -15,10 +15,6 @@ tags_metadata = [
         "description": "Статус работы бота",
     },
     {
-        "name": "bot",
-        "description": "Управление состоянием бота",
-    },
-    {
         "name": "users",
         "description": "Показывает страницу всех пользователей",
     },
@@ -27,15 +23,11 @@ tags_metadata = [
         "description": "Прокси к minio",
     },
     {
-        "name": "minio-base64",
-        "description": "Прокси к minio, который передаёт файлы в формате base64",
-    },
-    {
         "name": "settings",
         "description": "Получить настройки приложения",
     },
     {
-        "name": "healz",
+        "name": "healthz",
         "description": "Отвечает если приложение живо",
     },
 ]

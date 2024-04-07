@@ -11,7 +11,7 @@ from bot.map_handlers import (
     map_default_handlers
 )
 
-from bot.default_handlers import error_handler
+from bot.handlers.default import error_handler
 
 if __name__ == '__main__':
     logger.info("Starting...")
@@ -29,12 +29,12 @@ if __name__ == '__main__':
     if app.status == BotStatusEnum.OFF:
         logger.warning("Bot should be OFF... so exiting... Bye!")
         exit(0)
-    elif app.status in [BotStatusEnum.RESTART, BotStatusEnum.RESTARTING]:
-        logger.success("Bot is starting afer restart... continuing to init with default handlers")
-        map_default_handlers(app)
     elif app.status == BotStatusEnum.SERVICE:
         logger.warning("Bot should be run in service mode... so settings only service mode handlers")
         map_service_mode_handlers(app)
+    elif app.status in [BotStatusEnum.RESTART, BotStatusEnum.RESTARTING]:
+        logger.success("Bot is starting afer restart... continuing to init with default handlers")
+        map_default_handlers(app)
     elif app.status == BotStatusEnum.ON:
         logger.success("Bot is on! So continuing with default handlers...")
         map_default_handlers(app)

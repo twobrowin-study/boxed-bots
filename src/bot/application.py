@@ -1,6 +1,6 @@
 from asyncio import Queue
 from typing import Any, Callable, Coroutine
-from telegram.ext import Application
+from telegram.ext import Application, CallbackContext
 from telegram.ext._basepersistence import BasePersistence
 from telegram.ext._baseupdateprocessor import BaseUpdateProcessor
 from telegram.ext._contexttypes import ContextTypes
@@ -71,6 +71,29 @@ class BBApplication(Application):
         """
         bot_status  = await self.provider.bot_status
         self.status = bot_status.bot_status
+    
+    async def _bot_status_switch_job(self, context: CallbackContext) -> None:
+        await self.update_bot_status()
+
+        if self.status == BotStatusEnum.ON:
+            return logger.info("Checked bot status... should be on, so continuing")
+
+        logger.warning(f"Got bot status {self.status=}... so restarting")
+        
+        async with self.provider.db_session() as session:
+            if self.status in [BotStatusEnum.RESTART, BotStatusEnum.RESTARTING]:
+                await session.execute(
+                    update(BotStatus).values(bot_status = BotStatusEnum.RESTARTING)
+                )
+                await self._write_log(session, "Exiting into `restarting` mode")
+            elif self.status == BotStatusEnum.SERVICE:
+                await self._write_log(session, "Exiting into `service` mode")
+            elif self.status == BotStatusEnum.OFF:
+                await self._write_log(session, "Exiting into `off` mode")
+            
+            await session.commit()
+
+            exit(0)
         
     async def _post_init(self, _: Application) -> None:
         """
@@ -126,6 +149,9 @@ class BBApplication(Application):
         if bot_my_comands != my_commands:
             await bot.set_my_commands(my_commands)
             logger.info("Found difference in my commands - updated")
+
+        self.job_queue.run_repeating(self._bot_status_switch_job, interval=5)
+        logger.info("Statrted sheldued jobs")
         
         logger.info("Post init complete... starting main update loop")
     

@@ -7,8 +7,8 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from bot.application import BBApplication
-from bot.group_handlers import group_send_to_all_superadmin_awaited
-from bot.user_handlers import user_banned_bot, user_unbanned_bot
+from bot.handlers.group import group_send_to_all_superadmin_awaited
+from bot.helpers.user import user_set_have_banned_bot
 
 from loguru import logger
 
@@ -86,14 +86,14 @@ async def chat_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     elif update.effective_chat.type == Chat.PRIVATE:
         if update.my_chat_member.new_chat_member['status'] == update.my_chat_member.new_chat_member.BANNED:
-            await user_banned_bot(app, update.effective_chat.id)
+            await user_set_have_banned_bot(app, update.effective_chat.id, have_banned_bot=True)
             message = f"I was banned by private user `{update.effective_chat.id}`"
             logger.info(message)
             await app.write_log(message)
             return
         
         elif update.my_chat_member.new_chat_member['status'] == update.my_chat_member.new_chat_member.MEMBER:
-            await user_unbanned_bot(app, update.effective_chat.id)
+            await user_set_have_banned_bot(app, update.effective_chat.id, have_banned_bot=False)
             message = f"I was unbanned by private user `{update.effective_chat.id}`"
             logger.info(message)
             await app.write_log(message)

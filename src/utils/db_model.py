@@ -7,7 +7,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     MappedAsDataclass, 
     DeclarativeBase,
-
     Mapped,
     mapped_column,
     relationship
@@ -84,6 +83,20 @@ class User(Base):
     curr_field    = relationship('Field', lazy='selectin')
 
     fields_values = relationship('UserFieldValue', backref='user', lazy='selectin')
+
+    def to_dict(self) -> dict[str, str|dict]:
+        return {
+            'id': self.id,
+            'chat_id': self.chat_id,
+            'username': self.username,
+            'fields': {
+                field_value.field_id: {
+                    'value': field_value.value,
+                    'document_bucket': field_value.field.document_bucket
+                }
+                for field_value in self.fields_values
+            }
+        }
 
 class UserFieldValue(Base):
     """

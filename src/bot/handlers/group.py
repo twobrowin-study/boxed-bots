@@ -10,7 +10,7 @@ from utils.db_model import Group
 from utils.custom_types import GroupStatusEnum
 
 from bot.application import BBApplication
-from bot.helpers import (
+from bot.helpers.send_to_all import (
     send_to_all_coroutines_awaited,
     send_to_all_coroutines_tasked
 )

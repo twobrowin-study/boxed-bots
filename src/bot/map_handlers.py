@@ -11,18 +11,18 @@ from telegram.ext.filters import (
 
 from bot.application import BBApplication
 
-from bot.default_handlers import (
+from bot.handlers.default import (
     service_mode_handler,
     chat_member_handler,
     eddited_handler
 )
 
-from bot.group_handlers import (
+from bot.handlers.group import (
     group_help_handler,
     group_report_handler,
 )
 
-from bot.user_handlers import (
+from bot.handlers.user import (
     user_start_help_handler,
     user_message_text_handler,
     user_message_photo_document_handler

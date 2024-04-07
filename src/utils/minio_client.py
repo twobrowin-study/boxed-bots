@@ -4,6 +4,7 @@ from minio import Minio, S3Error
 from loguru import logger
 import json
 import filetype
+import httpx
 
 class MinIOClient:
     """
@@ -11,14 +12,20 @@ class MinIOClient:
     """
 
     def __init__(self, access_key: str, secret_key: str) -> None:
-        self._client = Minio('localhost:9000',
+        self.host = 'localhost:9000'
+        self.base_url = f"http://{self.host}"
+        self._client = Minio(self.host,
             access_key=access_key,
             secret_key=secret_key,
             secure=False
         )
         self._semaphore = asyncio.Semaphore(50)
+    
+    async def proxy_content(self, bucket: str, filename: str) -> httpx.Response:
+        async with httpx.AsyncClient() as client:
+            return await client.get(f"{self.base_url}/{bucket}/{filename}")
 
-    def _gues_content_type(self, bio: BytesIO) -> str:
+    def _guess_content_type(self, bio: BytesIO) -> str:
         """
         Попробовать угадать MIME тип файла или разочароваться и вернуть application/octet-stream
         """
@@ -33,7 +40,7 @@ class MinIOClient:
         Внутренняя функция для асинхроанного помещения файла в заданный бакет
         """
         def _put_object_sync():
-            content_type = self._gues_content_type(bio)
+            content_type = self._guess_content_type(bio)
             bio.seek(0)
             self._client.put_object(
                 bucket_name=bucket,
