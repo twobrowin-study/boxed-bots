@@ -16,7 +16,12 @@ from sqlalchemy.exc import IntegrityError
 
 from loguru import logger
 
-from utils.db_model import BotStatus, User, Field
+from utils.db_model import (
+    BotStatus,
+    User,
+    Field,
+    Settings
+)
 from utils.custom_types import (
     BotStatusEnum,
     FieldStatusEnum
@@ -54,8 +59,8 @@ async def status(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/bot", tags=["status"], dependencies=[Depends(verify_token)])
-async def set_bot_status(action: str) -> JSONResponse:
+@prefix_router.post("/status", tags=["status"], dependencies=[Depends(verify_token)])
+async def status(action: str) -> JSONResponse:
     """
     Устанавливает статус работы бота
     """
@@ -73,6 +78,9 @@ async def set_bot_status(action: str) -> JSONResponse:
             await session.execute(update(BotStatus).values(is_registration_open = True))
         elif action == 'deactivate_registration':
             await session.execute(update(BotStatus).values(is_registration_open = False))
+        else:
+            logger.error("Found unknown bot status...")
+            return JSONResponse({'error': True}, status_code=500)
 
         try:
             await session.commit()
@@ -90,7 +98,7 @@ async def set_bot_status(action: str) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/users", tags=["users"])
-async def settings(request: Request) -> HTMLResponse:
+async def users(request: Request) -> HTMLResponse:
     """
     Показывает пользователей
     """
@@ -123,7 +131,7 @@ async def settings(request: Request) -> HTMLResponse:
 ####################################################################################################
 
 @prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
-async def settings(bucket: str, filename: str) -> Response:
+async def minio(bucket: str, filename: str) -> Response:
     """
     Прокси к minio
     """
@@ -131,7 +139,7 @@ async def settings(bucket: str, filename: str) -> Response:
     return Response(content=response.content, headers=response.headers, status_code=response.status_code)
 
 @prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
-async def settings(bucket: str, filename: str) -> Response:
+async def minio(bucket: str, filename: str) -> Response:
     """
     Прокси к minio, который возвращает ответ в формате base64
     """
@@ -167,6 +175,39 @@ async def settings(request: Request) -> HTMLResponse:
             'settings': settings_with_description
         }
     )
+
+@prefix_router.post("/settings", tags=["settings"], dependencies=[Depends(verify_token)])
+async def settings(request: Request) -> HTMLResponse:
+    """
+    Устанавливает настройки бота
+    """
+    request_data = await request.json()
+    if not isinstance(request_data, dict):
+        logger.error("Found unknown request type...")
+        return JSONResponse({'error': True}, status_code=500)
+
+    logger.info(f"Got settings update reques with {request_data=}")
+
+    settings_attrs = {
+        key: value_dict['value']
+        for key, value_dict in request_data.items()
+        if isinstance(value_dict, dict) and 'value' in value_dict
+    }
+
+    async with provider.db_session() as session:
+        await session.execute(
+            update(Settings).values(**settings_attrs)
+        )
+
+        try:
+            await session.commit()
+            logger.success("Set Status table...")
+            return JSONResponse({'error': False})
+        except IntegrityError as err:
+            logger.error(err)
+            await session.rollback()
+            logger.error("Did not set Status table...")
+            return JSONResponse({'error': True}, status_code=500)
 
 
 ####################################################################################################

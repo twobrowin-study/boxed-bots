@@ -15,7 +15,11 @@ async def verify_token(token: Annotated[str, Depends(provider.oauth2_scheme)]) -
     """
     logger.info(f"Received Bearer token with request")
     try:
-        provider.keycloak.decode_token(token)
+        user = provider.keycloak.decode_token(token)
+        if 'preferred_username' in user:
+            logger.success(f"Request from user {user['preferred_username']}")
+        else:
+            logger.warning(f"Request from user without preferred_username!!!")
     except Exception as e:
         logger.info(f"Bearer token could not be verified: {e}")
         raise HTTPException(

@@ -111,7 +111,7 @@
       $('.bot-action').click((elem) => {
         let button = elem.delegateTarget;
         $.ajax({
-          url:  `{{ uri_prefix }}/bot?action=${button.getAttribute('action')}`,
+          url:  `${window.location.pathname}?action=${button.getAttribute('action')}`,
           type: 'POST',
           headers: {
             Accept:        "application/json",

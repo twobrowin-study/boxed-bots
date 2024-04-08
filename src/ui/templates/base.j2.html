@@ -4,6 +4,7 @@
     <title>{{ title }}</title>
     <link rel="icon" type="image/x-icon" href="{{ uri_prefix }}/assets/favicon.ico">
     <link href="{{ uri_prefix }}/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ uri_prefix }}/assets/css/bootstrap-icons.min.css" rel="stylesheet">
     <style>
       .container {
         max-width: 90% !important;
@@ -31,6 +32,57 @@
         $('#logout').click(() => keycloak.logout());
       }
     </script>
+    <script>
+      $(() => {
+        $('.row-edit').click((elem) => {
+          let button = $(elem.delegateTarget);
+          const button_edit_action = button.hasClass('row-edit');
+          const button_save_action = button.hasClass('row-save');
+          
+          button.toggleClass('row-edit row-save');
+          button.toggleClass('btn-outline-primary btn-outline-success');
+          button.children().toggleClass('bi-pencil-square bi-check2-square');
+          
+          let edditable_tds = button.parent().parent().children('.row-editable');
+          
+          if (button_edit_action) {
+            edditable_tds.attr('contenteditable', 'true');
+            edditable_tds.addClass('table-info');
+          }
+          
+          if (button_save_action) {
+            edditable_tds.attr('contenteditable', 'false');
+            edditable_tds.removeClass('table-info');
+
+            const request_data = {}
+            edditable_tds.each((index, elem) => {
+              const jelem = $(elem)
+              let curr_request_data = request_data
+              jelem.attr('id').split('-').forEach((value, index, array) => {
+                if (index === array.length-1) {
+                  curr_request_data[value] = jelem.text()
+                  return;
+                }
+                curr_request_data[value] = {};
+                curr_request_data = curr_request_data[value];
+              })
+            });
+
+            $.ajax({
+              url:  window.location.pathname,
+              type: 'POST',
+              data: JSON.stringify(request_data),
+              contentType: 'application/json',
+              headers: {
+                Accept:        "application/json",
+                Authorization: `Bearer ${keycloak.token}`
+              },
+              success: () => location.reload()
+            });
+          }
+        });
+      })  
+    </script>
   </head>
   <body>
     <div id="content" class="container" style="display: none;">
@@ -41,8 +93,8 @@
       <h1>{{ title }}</h1>
       <hr>
       <div>
-        <a href="{{ uri_prefix }}/status" class="btn btn-primary mr-1">{{ i18n.bot_status }}</a>
-        <a href="{{ uri_prefix }}/users" class="btn btn-primary mr-1">{{ i18n.users }}</a>
+        <a href="{{ uri_prefix }}/status"   class="btn btn-primary mr-1">{{ i18n.bot_status }}</a>
+        <a href="{{ uri_prefix }}/users"    class="btn btn-primary mr-1">{{ i18n.users }}</a>
         <a href="{{ uri_prefix }}/settings" class="btn btn-primary mr-1">{{ i18n.settings }}</a>
       </div>
       <hr>
