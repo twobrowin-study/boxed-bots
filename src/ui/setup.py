@@ -15,8 +15,16 @@ tags_metadata = [
         "description": "Статус работы бота",
     },
     {
+        "name": "logs",
+        "description": "Логи работы бота",
+    },
+    {
+        "name": "groups",
+        "description": "Группы телеграм",
+    },
+    {
         "name": "users",
-        "description": "Показывает страницу всех пользователей",
+        "description": "Пользователи",
     },
     {
         "name": "minio",
@@ -24,11 +32,11 @@ tags_metadata = [
     },
     {
         "name": "settings",
-        "description": "Получить настройки приложения",
+        "description": "Настройки приложения",
     },
     {
         "name": "healthz",
-        "description": "Отвечает если приложение живо",
+        "description": "Проверка того что приложение живо",
     },
 ]
 

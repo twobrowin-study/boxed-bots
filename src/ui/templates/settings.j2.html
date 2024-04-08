@@ -12,11 +12,11 @@
     </thead>
     <tbody>
       {% for setting in settings %}
-        <tr id="{{ setting.key }}">
-          <td id="{{ setting.key }}-key">{{ setting.key }}</td>
-          <td id="{{ setting.key }}-description"><span style="white-space: pre-line">{{ setting.description }}</span></td>
-          <td id="{{ setting.key }}-value" class="row-editable"><span style="white-space: pre-line">{{ setting.value }}</span></td>
-          <td id="{{ setting.key }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        <tr id="settings-{{ setting.key }}">
+          <td id="settings-{{ setting.key }}-key">{{ setting.key }}</td>
+          <td id="settings-{{ setting.key }}-description"><span style="white-space: pre-line">{{ setting.description }}</span></td>
+          <td id="settings-{{ setting.key }}-value" class="row-editable"><span style="white-space: pre-line">{{ setting.value }}</span></td>
+          <td id="settings-{{ setting.key }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}
     </tbody>

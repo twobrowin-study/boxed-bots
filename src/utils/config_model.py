@@ -90,6 +90,8 @@ class I18n(BaseModel, extra="forbid"):
     yes: str
     no:  str
 
+    there_was_en_error: str
+
     logout: str
     
     done:  str
@@ -115,6 +117,9 @@ class I18n(BaseModel, extra="forbid"):
     keyboard:      str
     settings:      str
     logs:          str
+
+    timestamp: str
+    message:   str
     
     key:         str
     description: str
@@ -140,6 +145,15 @@ class I18n(BaseModel, extra="forbid"):
     registration_open:    str
 
     username: str
+
+    chat_id:     str
+    status:      str
+    description: str
+
+    group_inactive:    str
+    group_normal:      str
+    group_admin:       str
+    group_super_admin: str
 
 class ConfigYaml(BaseSettings):
     """

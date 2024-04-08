@@ -1,0 +1,47 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="groups-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th id="groups-chat_id"    >{{ i18n.chat_id }}</th>
+        <th id="groups-status"     >{{ i18n.status }}</th>
+        <th id="groups-description">{{ i18n.description }}</th>
+        <th id="groups-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+        <tr id="groups-{{ group.id }}">
+          <td id="groups-{{ group.id }}-chat_id" class="row-editable">{{ group.chat_id }}</td>
+          <td id="groups-{{ group.id }}-status" class="row-editable">
+            <select id="groups-{{ group.id }}-status-value" class="form-select" disabled>
+              {% for status in group_status_enum %}
+                <option
+                  value="{{ status.value }}"
+                  {% if status == group.status %}selected='true'{% endif %}
+                >
+                  {{ i18n['group_' + status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="groups-{{ group.id }}-description" class="row-editable"><span style="white-space: pre-line">{{ group.description }}</span></td>
+          <td id="groups-{{ group.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="groups-new" class="elem-new d-none">
+        <td id="groups-new-chat_id" class="row-editable table-info" contenteditable="true"></td>
+        <td id="groups-new-status" class="row-editable table-info">
+          <select id="groups-new-status-value" class="form-select">
+            {% for status in group_status_enum %}
+              <option value="{{ status.value }}">{{ i18n['group_' + status.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="groups-new-description" class="row-editable table-info" contenteditable="true"></td>
+        <td id="groups-new-edit"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

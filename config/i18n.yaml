@@ -1,6 +1,8 @@
 'yes': Да
 'no':  Нет
 
+there_was_en_error: Произошла ошибка!
+
 logout: Выйти
 
 done:  Выполнено
@@ -26,6 +28,9 @@ notifications: Оповещения
 keyboard:      Клавиатура
 settings:      Настройки
 logs:          Логи
+
+timestamp: Метка времени
+message:   Сообщение
 
 key:         Ключ
 description: Описание
@@ -53,6 +58,15 @@ registration_close: Закрыть регистрацию
 registration_open:  Открыть регистрацию
 
 username: Имя пользователя Телеграм
+
+chat_id:     Id чата
+status:      Статус
+description: Описание
+
+group_inactive:    Не активна
+group_normal:      Обычная
+group_admin:       Админы
+group_super_admin: Супер админы
 
 # function:      Исполняемая функция
 # function_description: Исполняемая функция

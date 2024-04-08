@@ -117,7 +117,8 @@
             Accept:        "application/json",
             Authorization: `Bearer ${keycloak.token}`
           },
-          success: () => location.reload()
+          success: () => location.reload(),
+          error: () => $('#there-was-en-error').removeClass('d-none')
         });
       });
     });
