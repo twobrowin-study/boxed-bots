@@ -1,0 +1,50 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="keyboard_keys-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th id="keyboard_keys-key"          >{{ i18n.key }}</th>
+        <th id="keyboard_keys-status"       >{{ i18n.status }}</th>
+        <th id="keyboard_keys-text_markdown">{{ i18n.text_markdown }}</th>
+        <th id="keyboard_keys-photo_link"   >{{ i18n.photo_link }}</th>
+        <th id="keyboard_keys-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for keyboard_key in keyboard_keys %}
+        <tr id="keyboard_keys-{{ keyboard_key.id }}">
+          <td id="keyboard_keys-{{ keyboard_key.id }}-key"    class="row-editable">{{ keyboard_key.key }}</td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-status" class="row-editable">
+            <select id="keyboard_keys-{{ keyboard_key.id }}-status-value" class="form-select" disabled>
+              {% for status in keyboard_key_status_enum %}
+                <option
+                  value="{{ status.value }}"
+                  {% if status == keyboard_key.status %}selected='true'{% endif %}
+                >
+                  {{ i18n['keyboard_key_' + status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-text_markdown" class="row-editable" style="white-space: pre-line">{{ keyboard_key.text_markdown }}</td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable"><a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a></td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="keyboard_keys-new" class="elem-new d-none">
+        <td id="keyboard_keys-new-key"    class="row-editable table-info" contenteditable="true"></td>
+        <td id="keyboard_keys-new-status" class="row-editable table-info">
+          <select id="keyboard_keys-new-status-value" class="form-select">
+            {% for status in keyboard_key_status_enum %}
+              <option value="{{ status.value }}">{{ i18n['keyboard_key_' + status.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="keyboard_keys-new-text_markdown" class="row-editable table-info" contenteditable="true"></td>
+        <td id="keyboard_keys-new-photo_link"    class="row-editable table-info" contenteditable="true"></td>
+        <td id="keyboard_keys-new-edit"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

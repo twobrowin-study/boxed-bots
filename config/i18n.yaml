@@ -68,6 +68,16 @@ group_normal:      Обычная
 group_admin:       Админы
 group_super_admin: Супер админы
 
+keyboard_keys: Клавиатура
+
+text_markdown: Тест разметки markdwon
+photo_link:    Ссылка на изображение
+
+keyboard_key_inactive: Не активна
+keyboard_key_normal:   Обычная
+keyboard_key_deferred: Отложенные вопросы
+keyboard_key_me:       Обо мне
+
 # function:      Исполняемая функция
 # function_description: Исполняемая функция
 # text_markdown: Текст

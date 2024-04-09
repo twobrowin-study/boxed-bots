@@ -12,7 +12,7 @@
       {% for log in logs %}
         <tr id="logs-{{ log.id }}">
           <td id="logs-{{ log.id }}-timestamp">{{ log.timestamp }}</td>
-          <td id="logs-{{ log.id }}-message"><span style="white-space: pre-line">{{ log.message }}</span></td>
+          <td id="logs-{{ log.id }}-message" style="white-space: pre-line">{{ log.message }}</td>
         </tr>
       {% endfor %}
     </tbody>

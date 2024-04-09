@@ -64,7 +64,7 @@ async def get_request_data_or_responce(request: Request, type_str: str) -> tuple
 def prepare_attrs_object_from_request(
         request_data: dict[str, dict[str, str|dict[str, str]]],
         status_type: type[Enum],
-        numeric_keys: list[str]
+        numeric_keys: list[str] = []
     ) -> tuple[dict[str|int, dict[str, str|Enum]], JSONResponse|None]:
     bad_responce = JSONResponse({'error': True}, status_code=500)
     attrs: dict[str|int, dict[str, str|Enum]] = {}

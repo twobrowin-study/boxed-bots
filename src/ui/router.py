@@ -20,6 +20,7 @@ from utils.db_model import (
     BotStatus,
     User,
     Field,
+    KeyboardKey,
     Group,
     Settings,
     Log
@@ -27,6 +28,7 @@ from utils.db_model import (
 from utils.custom_types import (
     BotStatusEnum,
     FieldStatusEnum,
+    KeyboardKeyStatusEnum,
     GroupStatusEnum,
 )
 
@@ -159,6 +161,69 @@ async def minio(bucket: str, filename: str) -> Response:
 
 
 ####################################################################################################
+# Keyboard keys
+####################################################################################################
+
+@prefix_router.get("/keyboard_keys", tags=["keyboard_keys"])
+async def keyboard_keys(request: Request) -> HTMLResponse:
+    """
+    Показывает кнопки клавиатуры
+    """
+    async with provider.db_session() as session:
+        keyboard_keys_selected = await session.execute(
+            select(KeyboardKey).order_by(KeyboardKey.id.asc())
+        )
+
+    keyboard_keys = keyboard_keys_selected.scalars().all()
+
+    return template(
+        request=request, template_name="keyboard_keys.j2.html",
+        additional_context = {
+            'title':  provider.config.i18n.keyboard_keys,
+            'keyboard_keys': keyboard_keys,
+            'keyboard_key_status_enum': KeyboardKeyStatusEnum
+        }
+    )
+
+@prefix_router.post("/keyboard_keys", tags=["keyboard_keys"], dependencies=[Depends(verify_token)])
+async def keyboard_keys(request: Request) -> JSONResponse:
+    """
+    Изменяет настройки клавиш клавиатуры
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'keyboard_keys')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got keyboard_keys update reques with {request_data=}")
+
+    keyboard_keys_attrs, bad_responce = prepare_attrs_object_from_request(request_data, KeyboardKeyStatusEnum)
+    if bad_responce:
+        return bad_responce
+
+    async with provider.db_session() as session:
+        for idx,keyboard_key_obj in keyboard_keys_attrs.items():
+            if idx == 'new':
+                await session.execute(
+                    insert(KeyboardKey).values(**keyboard_key_obj)
+                )
+            else:
+                await session.execute(
+                    update(KeyboardKey)
+                    .where(KeyboardKey.id == idx)
+                    .values(**keyboard_key_obj)
+                )
+        try:
+            await session.commit()
+            logger.success("Set KeyboardKey table...")
+            return JSONResponse({'error': False})
+        except IntegrityError as err:
+            logger.error(err)
+            await session.rollback()
+            logger.error("Did not set KeyboardKey table...")
+            return JSONResponse({'error': True}, status_code=500)
+
+
+####################################################################################################
 # Groups
 ####################################################################################################
 
@@ -212,12 +277,12 @@ async def groups(request: Request) -> JSONResponse:
                 )
         try:
             await session.commit()
-            logger.success("Set Status table...")
+            logger.success("Set Group table...")
             return JSONResponse({'error': False})
         except IntegrityError as err:
             logger.error(err)
             await session.rollback()
-            logger.error("Did not set Status table...")
+            logger.error("Did not set Group table...")
             return JSONResponse({'error': True}, status_code=500)
 
 

@@ -15,14 +15,6 @@ tags_metadata = [
         "description": "Статус работы бота",
     },
     {
-        "name": "logs",
-        "description": "Логи работы бота",
-    },
-    {
-        "name": "groups",
-        "description": "Группы телеграм",
-    },
-    {
         "name": "users",
         "description": "Пользователи",
     },
@@ -31,8 +23,20 @@ tags_metadata = [
         "description": "Прокси к minio",
     },
     {
+        "name": "keybaord_keys",
+        "description": "Клавиши клавиатуры",
+    },
+    {
+        "name": "groups",
+        "description": "Группы телеграм",
+    },
+    {
         "name": "settings",
         "description": "Настройки приложения",
+    },
+    {
+        "name": "logs",
+        "description": "Логи работы бота",
     },
     {
         "name": "healthz",

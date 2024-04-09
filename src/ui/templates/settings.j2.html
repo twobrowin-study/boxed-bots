@@ -4,18 +4,18 @@
   <table id="settings-table" class="table table-striped">
     <thead>
       <tr>
-        <th>{{ i18n.key }}</th>
-        <th>{{ i18n.description }}</th>
-        <th>{{ i18n.value }}</th>
-        <th></th>
+        <th id="settings-key"        >{{ i18n.key }}</th>
+        <th id="settings-description">{{ i18n.description }}</th>
+        <th id="settings-value"      >{{ i18n.value }}</th>
+        <th id="settings-close"><button class="row-close d-none btn btn-outline-warning btn-sm"><i class="bi bi-slash-square"></i></button></th>
       </tr>
     </thead>
     <tbody>
       {% for setting in settings %}
         <tr id="settings-{{ setting.key }}">
           <td id="settings-{{ setting.key }}-key">{{ setting.key }}</td>
-          <td id="settings-{{ setting.key }}-description"><span style="white-space: pre-line">{{ setting.description }}</span></td>
-          <td id="settings-{{ setting.key }}-value" class="row-editable"><span style="white-space: pre-line">{{ setting.value }}</span></td>
+          <td id="settings-{{ setting.key }}-description" style="white-space: pre-line">{{ setting.description }}</td>
+          <td id="settings-{{ setting.key }}-value" class="row-editable" style="white-space: pre-line">{{ setting.value }}</td>
           <td id="settings-{{ setting.key }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}

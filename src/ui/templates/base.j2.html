@@ -69,7 +69,7 @@
             /// Replace new button with close button
             const close_button = $('.row-new, .row-close');
             const close_button_ico = close_button.children();
-            close_button.removeClass('row-new btn-outline-secondary');
+            close_button.removeClass('row-new btn-outline-secondary d-none');
             close_button_ico.removeClass('bi-plus-square');
             close_button.addClass('row-close');
             close_button.addClass('btn-outline-warning');
@@ -109,14 +109,31 @@
 
             /// Parse text data - make an object from array of elements
             edditable_text_tds.each((index, elem) => {
-              const jquery_elem = $(elem)
-              set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.text())
+              const jquery_elem = $(elem);
+              const elem_divs = jquery_elem.children('div');
+              
+              /// Default variant - there is no div elements
+              /// that are created via eddit mode
+              var text = jquery_elem.text();
+              
+              /// There are div elements - parce them
+              if (elem_divs.length > 0) {
+                text = jquery_elem.html()
+                                  .trim()
+                                  .replace(/<br(\s*)\/*>/ig, '\n')
+                                  .replace(/<[p|div]\s/ig,   '\n$0')
+                                  .replace(/([^>\s])<\/[p|div]+>/ig,'$1\n')
+                                  .replace(/(<([^>]+)>)/ig, '')
+                                  .trim();
+              }
+
+              set_request_data_from_id(jquery_elem.attr('id'), text);
             });
 
             /// Parse select data - make an object from array of elements
             edditable_selects.each((index, elem) => {
-              const jquery_elem = $(elem)
-              set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val())
+              const jquery_elem = $(elem);
+              set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val());
             });
 
             /// Make a save call and reload page
@@ -193,11 +210,12 @@
       <h1>{{ title }}</h1>
       <hr>
       <div>
-        <a href="{{ uri_prefix }}/status"   class="btn btn-primary mr-1">{{ i18n.bot_status }}</a>
-        <a href="{{ uri_prefix }}/users"    class="btn btn-primary mr-1">{{ i18n.users }}</a>
-        <a href="{{ uri_prefix }}/groups"   class="btn btn-primary mr-1">{{ i18n.groups }}</a>
-        <a href="{{ uri_prefix }}/settings" class="btn btn-primary mr-1">{{ i18n.settings }}</a>
-        <a href="{{ uri_prefix }}/logs"     class="btn btn-primary mr-1">{{ i18n.logs }}</a>
+        <a href="{{ uri_prefix }}/status"        class="btn btn-primary mr-1">{{ i18n.bot_status }}</a>
+        <a href="{{ uri_prefix }}/users"         class="btn btn-primary mr-1">{{ i18n.users }}</a>
+        <a href="{{ uri_prefix }}/keyboard_keys" class="btn btn-primary mr-1">{{ i18n.keyboard_keys }}</a>
+        <a href="{{ uri_prefix }}/groups"        class="btn btn-primary mr-1">{{ i18n.groups }}</a>
+        <a href="{{ uri_prefix }}/settings"      class="btn btn-primary mr-1">{{ i18n.settings }}</a>
+        <a href="{{ uri_prefix }}/logs"          class="btn btn-primary mr-1">{{ i18n.logs }}</a>
       </div>
       <hr>
       {% block content %}{% endblock %}

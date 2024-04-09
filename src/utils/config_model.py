@@ -155,6 +155,16 @@ class I18n(BaseModel, extra="forbid"):
     group_admin:       str
     group_super_admin: str
 
+    keyboard_keys: str
+
+    text_markdown: str
+    photo_link:    str
+
+    keyboard_key_inactive: str
+    keyboard_key_normal:   str
+    keyboard_key_deferred: str
+    keyboard_key_me:       str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния
