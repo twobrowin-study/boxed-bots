@@ -162,7 +162,7 @@ class KeyboardKey(Base):
     key:     Mapped[str]                   = mapped_column(nullable=False,   index=True)
     status:  Mapped[KeyboardKeyStatusEnum] = mapped_column(nullable=False,   default=KeyboardKeyStatusEnum.INACTIVE)
 
-    text_markdown: Mapped[str]      = mapped_column(nullable=False, default=None)
+    text_markdown: Mapped[str]      = mapped_column(nullable=True, default=None)
     photo_link:    Mapped[str|None] = mapped_column(nullable=True,  default=None)
 
     branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=True)

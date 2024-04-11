@@ -54,7 +54,7 @@ RUN apt-get update \
  && rm -rf ${PG_HOME} \
  && rm -rf /var/lib/apt/lists/*
 
-ENV MINIO_RELEASE="2024-03-26T22-10-45Z" \
+ENV MINIO_RELEASE="2024-04-06T05-26-02Z" \
     MINIO_DATADIR=${BOX_BOT_DATA}/minio \
     MINIO_BINARY=/sbin/minio \
     MINIO_USER=minio

@@ -32,7 +32,7 @@
       {% for user in users %}
         <tr id="user-{{ user.id }}">
           <td id="user-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
-          <td id="user-{{ user.id }}-username">{{ user.username }}</td>
+          <td id="user-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
           {% for field in fields %}
             <td id='user-{{ user.id }}-field-{{ field.id }}'>
               {% if field.id in user.fields %}

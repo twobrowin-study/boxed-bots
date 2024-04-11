@@ -2,11 +2,11 @@ version: '3.8'
 
 services:
   box-bot:
-    image: twobrowin/box-bot:1.0.7
+    image: twobrowin/box-bot:1.1.0
     build:
      context: .
     ports:
-      # - 8080:8080
+      - 8080:8080
       - 5432:5432
       - 9000:9000
       - 9001:9001

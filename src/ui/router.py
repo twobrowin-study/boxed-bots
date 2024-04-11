@@ -346,6 +346,11 @@ async def keyboard_keys(request: Request) -> JSONResponse:
                 if 'branch_id' not in keyboard_keys_attr or not keyboard_keys_attr['branch_id']:
                     logger.warning(f"Did not found branch_id in keyboard_key object while status is ME or DEFERRED")
                     return JSONResponse({'error': True}, status_code=500)
+                
+            if keyboard_keys_attr['status'] in [KeyboardKeyStatusEnum.NORMAL, KeyboardKeyStatusEnum.DEFERRED]:
+                if 'text_markdown' not in keyboard_keys_attr or not keyboard_keys_attr['text_markdown']:
+                    logger.warning(f"Did not found text_markdown in keyboard_key object while status is NORMAL or DEFERRED")
+                    return JSONResponse({'error': True}, status_code=500)
     
     return await try_to_save_attrs(KeyboardKey, keyboard_keys_attrs)
 
