@@ -154,6 +154,9 @@ class KeyboardKey(Base):
     text_markdown: Mapped[str]      = mapped_column(nullable=False, default=None)
     photo_link:    Mapped[str|None] = mapped_column(nullable=True,  default=None)
 
+    branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=True)
+    """Id Ветки, на основе которой отображаются данные для модификации, используется при статусе KeyboardKeyStatusEnum.ME"""
+
 class Log(Base):
     """
     Лог - дополнительный способ сохранить информацию из бота

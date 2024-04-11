@@ -208,6 +208,8 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
             #     }
             #     print(sorted(users_field_values))
 
+            print(f"{keyboard_key.photo_link=}")
+
             if keyboard_key.photo_link in [None, '']:
                 return await update.message.reply_markdown(
                     keyboard_key.text_markdown,

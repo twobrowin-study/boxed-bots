@@ -28,10 +28,18 @@
             </select>
           </td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-text_markdown" class="row-editable" style="white-space: pre-line">{{ keyboard_key.text_markdown }}</td>
-          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable">
-            {% if keyboard_key.photo_link %}
-              <a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a>
-            {% endif %}
+          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable">{% if keyboard_key.photo_link %}<a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a>{% endif %}</td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-branch_id" class="row-editable">
+            <select id="keyboard_keys-{{ keyboard_key.id }}-branch_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not  keyboard_key.branch_id  %}selected='true'{% endif %}>{{ i18n.branch_none }}</option>
+                {% for field_branch in field_branches %}
+                  <option value="{{ field_branch.id }}"
+                    {% if field_branch.id == keyboard_key.branch_id %}selected='true'{% endif %}
+                  >
+                    {{ field_branch.key }}
+                  </option>
+                {% endfor %}
+            </select>
           </td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>

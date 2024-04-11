@@ -130,7 +130,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
     Показывает пользователей
     """
     async with provider.db_session() as session:
-        fields_branches_selected = await session.execute(
+        field_branches_selected = await session.execute(
             select(FieldBranch).order_by(FieldBranch.id.asc())
         )
         fields_selected = await session.execute(
@@ -142,7 +142,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
             .order_by(User.id.asc())
         )
 
-        fields_branches = list(fields_branches_selected.scalars().all())
+        field_branches = list(field_branches_selected.scalars().all())
         fields          = list(fields_selected.scalars().all())
         users = [ user.to_dict() for user in users_selected.scalars() ]
 
@@ -151,7 +151,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
             additional_context = {
                 'title':           provider.config.i18n.users,
                 'field_branch_id': branch_id,
-                'field_branches':  fields_branches,
+                'field_branches':  field_branches,
                 'fields':          fields,
                 'users':           users
             }
@@ -193,11 +193,11 @@ async def fields() -> RedirectResponse:
     """
     settings = await provider.settings
     async with provider.db_session() as session:
-        fields_branches_selected = await session.execute(
+        field_branches_selected = await session.execute(
             select(FieldBranch)
             .where(FieldBranch.key == settings.first_field_branch)
         )
-    first_field_branch_id = fields_branches_selected.scalar_one().id
+    first_field_branch_id = field_branches_selected.scalar_one().id
     return RedirectResponse(url=f"{provider.config.path_prefix}/fields/{first_field_branch_id}", status_code=HTTP_302_FOUND)
 
 @prefix_router.get("/fields/{branch_id}", tags=["fields"])
@@ -206,7 +206,7 @@ async def fields(branch_id: int, request: Request) -> HTMLResponse:
     Показывает пользовательские поля
     """
     async with provider.db_session() as session:
-        fields_branches_selected = await session.execute(
+        field_branches_selected = await session.execute(
             select(FieldBranch).order_by(FieldBranch.id.asc())
         )
         fields_selected = await session.execute(
@@ -214,7 +214,7 @@ async def fields(branch_id: int, request: Request) -> HTMLResponse:
             .order_by(Field.order_place.asc())
         )
 
-    fields_branches = list(fields_branches_selected.scalars().all())
+    field_branches = list(field_branches_selected.scalars().all())
     fields          = list(fields_selected.scalars().all())
 
     return template(
@@ -222,7 +222,7 @@ async def fields(branch_id: int, request: Request) -> HTMLResponse:
         additional_context = {
             'title':             provider.config.i18n.fields,
             'field_branch_id':   branch_id,
-            'field_branches':    fields_branches,
+            'field_branches':    field_branches,
             'fields':            fields,
             'field_status_enum': FieldStatusEnum
         }
@@ -299,18 +299,23 @@ async def keyboard_keys(request: Request) -> HTMLResponse:
     Показывает кнопки клавиатуры
     """
     async with provider.db_session() as session:
+        field_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
+        )
         keyboard_keys_selected = await session.execute(
             select(KeyboardKey).order_by(KeyboardKey.id.asc())
         )
 
+    field_branches = list(field_branches_selected.scalars().all())
     keyboard_keys = keyboard_keys_selected.scalars().all()
 
     return template(
         request=request, template_name="keyboard_keys.j2.html",
         additional_context = {
             'title':  provider.config.i18n.keyboard_keys,
-            'keyboard_keys': keyboard_keys,
-            'keyboard_key_status_enum': KeyboardKeyStatusEnum
+            'keyboard_keys':            keyboard_keys,
+            'keyboard_key_status_enum': KeyboardKeyStatusEnum,
+            'field_branches':           field_branches
         }
     )
 
