@@ -55,6 +55,14 @@
         </td>
         <td id="keyboard_keys-new-text_markdown" class="row-editable table-info" contenteditable="true"></td>
         <td id="keyboard_keys-new-photo_link"    class="row-editable table-info" contenteditable="true"></td>
+        <td id="keyboard_keys-new-branch_id" class="row-editable">
+          <select id="keyboard_keys-new-branch_id-id_value" class="form-select" disabled>
+            <option value="None">{{ i18n.branch_none }}</option>
+              {% for field_branch in field_branches %}
+                <option value="{{ field_branch.id }}">{{ field_branch.key }}</option>
+              {% endfor %}
+          </select>
+        </td>
         <td id="keyboard_keys-new-edit"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>

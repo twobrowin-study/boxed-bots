@@ -105,5 +105,9 @@ async def eddited_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     Обработчик изменённых сообщений - вовращает стандартную ошибку
     """
     app: BBApplication = context.application
+    chat_id  = update.effective_user.id
+    username = update.effective_user.username
+
     settings = await app.provider.settings
+    logger.warning(f"Got eddited message request from {chat_id=} {username=}")
     await update.effective_message.reply_markdown(settings.edited_message_reply)

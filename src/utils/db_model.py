@@ -155,7 +155,11 @@ class KeyboardKey(Base):
     photo_link:    Mapped[str|None] = mapped_column(nullable=True,  default=None)
 
     branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=True)
-    """Id Ветки, на основе которой отображаются данные для модификации, используется при статусе KeyboardKeyStatusEnum.ME"""
+    """
+    Id Ветки, на основе которой отображаются данные для модификации или возврата
+    
+    Используется при статусе KeyboardKeyStatusEnum.ME или KeyboardKeyStatusEnum.DEFERRED
+    """
 
 class Log(Base):
     """

@@ -334,6 +334,13 @@ async def keyboard_keys(request: Request) -> JSONResponse:
     if bad_responce:
         return bad_responce
     
+    for _,keyboard_keys_attr in keyboard_keys_attrs.items():
+        if 'status' in keyboard_keys_attr:
+            if keyboard_keys_attr['status'] in [KeyboardKeyStatusEnum.ME, KeyboardKeyStatusEnum.DEFERRED]:
+                if 'branch_id' not in keyboard_keys_attr or not keyboard_keys_attr['branch_id']:
+                    logger.warning(f"Did not found branch_id in keyboard_key object while status is ME or DEFERRED")
+                    return JSONResponse({'error': True}, status_code=500)
+    
     return await try_to_save_attrs(KeyboardKey, keyboard_keys_attrs)
 
 
