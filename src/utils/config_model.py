@@ -165,6 +165,29 @@ class I18n(BaseModel, extra="forbid"):
     keyboard_key_deferred: str
     keyboard_key_me:       str
 
+    field_branches: str
+    fields:         str
+
+    branch_none:    str
+
+    is_ui_edditable:  str
+    is_bot_edditable: str
+    is_deferrable:    str
+    next_branch_id:    str
+
+    field_branch_inactive: str
+    field_branch_normal:   str
+
+    order_place:       str
+    branch_id:         str
+    question_markdown: str
+    answer_options:    str
+    image_bucket:      str
+    document_bucket:   str
+
+    field_inactive: str
+    field_normal:   str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния

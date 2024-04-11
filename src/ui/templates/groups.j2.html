@@ -1,7 +1,7 @@
 {% extends "base.j2.html" %}
 
 {% block content %}
-  <table id="groups-table" class="table table-striped">
+  <table id="groups-table" class="table table-striped align-middle">
     <thead>
       <tr>
         <th id="groups-chat_id"    >{{ i18n.chat_id }}</th>
@@ -26,7 +26,7 @@
               {% endfor %}
             </select>
           </td>
-          <td id="groups-{{ group.id }}-description" class="row-editable" style="white-space: pre-line">{{ group.description }}</td>
+          <td id="groups-{{ group.id }}-description" class="row-editable" style="white-space: pre-line">{% if group.description %}{{ group.description }}{% endif %}</td>
           <td id="groups-{{ group.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}

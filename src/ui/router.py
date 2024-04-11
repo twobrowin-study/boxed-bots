@@ -20,6 +20,7 @@ from utils.db_model import (
     BotStatus,
     User,
     Field,
+    FieldBranch,
     KeyboardKey,
     Group,
     Settings,
@@ -28,6 +29,7 @@ from utils.db_model import (
 from utils.custom_types import (
     BotStatusEnum,
     FieldStatusEnum,
+    FieldBranchStatusEnum,
     KeyboardKeyStatusEnum,
     GroupStatusEnum,
 )
@@ -38,6 +40,7 @@ from ui.helpers import (
     template,
     get_request_data_or_responce,
     prepare_attrs_object_from_request,
+    try_to_save_attrs
 )
 
 app.mount(f"{provider.config.path_prefix}/assets", StaticFiles(directory=f"{provider.config.box_bot_home}/src/ui/assets"), name="assets")
@@ -107,31 +110,50 @@ async def status(action: str) -> JSONResponse:
 # Users
 ####################################################################################################
 
-@prefix_router.get("/users", tags=["users"])
-async def users(request: Request) -> HTMLResponse:
+@prefix_router.get("/users", tags=['users'])
+async def users() -> RedirectResponse:
+    """
+    Перенаправляет на страницу пользователей с самой первой веткой полей
+    """
+    settings = await provider.settings
+    async with provider.db_session() as session:
+        users_branches_selected = await session.execute(
+            select(FieldBranch)
+            .where(FieldBranch.key == settings.first_field_branch)
+        )
+    first_field_branch_id = users_branches_selected.scalar_one().id
+    return RedirectResponse(url=f"{provider.config.path_prefix}/users/branch/{first_field_branch_id}", status_code=HTTP_302_FOUND)
+
+@prefix_router.get("/users/branch/{branch_id}", tags=["users"])
+async def users(branch_id: int, request: Request) -> HTMLResponse:
     """
     Показывает пользователей
     """
     async with provider.db_session() as session:
-        fields_selected = await session.execute(
-            select(Field)
-            .where(Field.status == FieldStatusEnum.MAIN)
-            .order_by(Field.id.asc())
+        fields_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
         )
-        fields = list(fields_selected.scalars())
-
+        fields_selected = await session.execute(
+            select(Field).where(Field.branch_id == branch_id)
+            .order_by(Field.order_place.asc())
+        )
         users_selected = await session.execute(
             select(User)
             .order_by(User.id.asc())
         )
+
+        fields_branches = list(fields_branches_selected.scalars().all())
+        fields          = list(fields_selected.scalars().all())
         users = [ user.to_dict() for user in users_selected.scalars() ]
         
         return template(
             request=request, template_name="users.j2.html",
             additional_context = {
-                'title': provider.config.i18n.users,
-                'fields': fields,
-                'users': users
+                'title':           provider.config.i18n.users,
+                'field_branch_id': branch_id,
+                'field_branches':  fields_branches,
+                'fields':          fields,
+                'users':           users
             }
         )
 
@@ -158,6 +180,113 @@ async def minio(bucket: str, filename: str) -> Response:
         'image': base64.b64encode(response.content).decode(),
         'mime':  response.headers['content-type']
     })
+
+
+####################################################################################################
+# Fields
+####################################################################################################
+
+@prefix_router.get("/fields", tags=['fields'])
+async def fields() -> RedirectResponse:
+    """
+    Перенаправляет на страницу полей с самой первой веткой полей
+    """
+    settings = await provider.settings
+    async with provider.db_session() as session:
+        fields_branches_selected = await session.execute(
+            select(FieldBranch)
+            .where(FieldBranch.key == settings.first_field_branch)
+        )
+    first_field_branch_id = fields_branches_selected.scalar_one().id
+    return RedirectResponse(url=f"{provider.config.path_prefix}/fields/{first_field_branch_id}", status_code=HTTP_302_FOUND)
+
+@prefix_router.get("/fields/{branch_id}", tags=["fields"])
+async def fields(branch_id: int, request: Request) -> HTMLResponse:
+    """
+    Показывает пользовательские поля
+    """
+    async with provider.db_session() as session:
+        fields_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
+        )
+        fields_selected = await session.execute(
+            select(Field).where(Field.branch_id == branch_id)
+            .order_by(Field.order_place.asc())
+        )
+
+    fields_branches = list(fields_branches_selected.scalars().all())
+    fields          = list(fields_selected.scalars().all())
+
+    return template(
+        request=request, template_name="fields.j2.html",
+        additional_context = {
+            'title':             provider.config.i18n.fields,
+            'field_branch_id':   branch_id,
+            'field_branches':    fields_branches,
+            'fields':            fields,
+            'field_status_enum': FieldStatusEnum
+        }
+    )
+
+@prefix_router.post("/fields/{branch_id}", tags=["fields"], dependencies=[Depends(verify_token)])
+async def fields(branch_id: int, request: Request) -> JSONResponse:
+    """
+    Изменяет настройки веток пользовательских полей
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'fields')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got fields update request on branch {branch_id=} with {request_data=}")
+
+    fields_attrs, bad_responce = prepare_attrs_object_from_request(request_data, FieldStatusEnum, ['order_place'])
+    if bad_responce:
+        return bad_responce
+
+    return await try_to_save_attrs(Field, fields_attrs)
+
+
+####################################################################################################
+# Field branches
+####################################################################################################
+
+@prefix_router.get("/field_branches", tags=["field_branches"])
+async def field_branches(request: Request) -> HTMLResponse:
+    """
+    Показывает ветки пользовательскх полей
+    """
+    async with provider.db_session() as session:
+        field_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
+        )
+
+    field_branches = list(field_branches_selected.scalars().all())
+
+    return template(
+        request=request, template_name="field_branches.j2.html",
+        additional_context = {
+            'title':  provider.config.i18n.field_branches,
+            'field_branches': field_branches,
+            'field_branch_status_enum': FieldBranchStatusEnum
+        }
+    )
+
+@prefix_router.post("/field_branches", tags=["field_branches"], dependencies=[Depends(verify_token)])
+async def field_branches(request: Request) -> JSONResponse:
+    """
+    Изменяет настройки веток пользовательских полей
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'field_branches')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got field_branches update request with {request_data=}")
+
+    field_branches_attrs, bad_responce = prepare_attrs_object_from_request(request_data, FieldBranchStatusEnum)
+    if bad_responce:
+        return bad_responce
+    
+    return await try_to_save_attrs(FieldBranch, field_branches_attrs)
 
 
 ####################################################################################################
@@ -194,33 +323,13 @@ async def keyboard_keys(request: Request) -> JSONResponse:
     if bad_responce:
         return bad_responce
 
-    logger.info(f"Got keyboard_keys update reques with {request_data=}")
+    logger.info(f"Got keyboard_keys update request with {request_data=}")
 
     keyboard_keys_attrs, bad_responce = prepare_attrs_object_from_request(request_data, KeyboardKeyStatusEnum)
     if bad_responce:
         return bad_responce
-
-    async with provider.db_session() as session:
-        for idx,keyboard_key_obj in keyboard_keys_attrs.items():
-            if idx == 'new':
-                await session.execute(
-                    insert(KeyboardKey).values(**keyboard_key_obj)
-                )
-            else:
-                await session.execute(
-                    update(KeyboardKey)
-                    .where(KeyboardKey.id == idx)
-                    .values(**keyboard_key_obj)
-                )
-        try:
-            await session.commit()
-            logger.success("Set KeyboardKey table...")
-            return JSONResponse({'error': False})
-        except IntegrityError as err:
-            logger.error(err)
-            await session.rollback()
-            logger.error("Did not set KeyboardKey table...")
-            return JSONResponse({'error': True}, status_code=500)
+    
+    return await try_to_save_attrs(KeyboardKey, keyboard_keys_attrs)
 
 
 ####################################################################################################
@@ -257,33 +366,13 @@ async def groups(request: Request) -> JSONResponse:
     if bad_responce:
         return bad_responce
 
-    logger.info(f"Got groups update reques with {request_data=}")
+    logger.info(f"Got groups update request with {request_data=}")
 
     groups_attrs, bad_responce = prepare_attrs_object_from_request(request_data, GroupStatusEnum, ['chat_id'])
     if bad_responce:
         return bad_responce
-
-    async with provider.db_session() as session:
-        for idx,group_obj in groups_attrs.items():
-            if idx == 'new':
-                await session.execute(
-                    insert(Group).values(**group_obj)
-                )
-            else:
-                await session.execute(
-                    update(Group)
-                    .where(Group.id == idx)
-                    .values(**group_obj)
-                )
-        try:
-            await session.commit()
-            logger.success("Set Group table...")
-            return JSONResponse({'error': False})
-        except IntegrityError as err:
-            logger.error(err)
-            await session.rollback()
-            logger.error("Did not set Group table...")
-            return JSONResponse({'error': True}, status_code=500)
+    
+    return await try_to_save_attrs(Group, groups_attrs)
 
 
 ####################################################################################################
@@ -321,14 +410,14 @@ async def settings(request: Request) -> JSONResponse:
     if bad_responce:
         return bad_responce
 
-    logger.info(f"Got settings update reques with {request_data=}")
+    logger.info(f"Got settings update request with {request_data=}")
 
     settings_attrs = {
         key: value_dict['value']
         for key, value_dict in request_data.items()
         if isinstance(value_dict, dict) and 'value' in value_dict
     }
-
+    
     async with provider.db_session() as session:
         await session.execute(
             update(Settings).values(**settings_attrs)

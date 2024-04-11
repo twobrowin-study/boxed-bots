@@ -1,9 +1,27 @@
 {% extends "base.j2.html" %}
 
 {% block content %}
+  <div>
+    {% for field_branch in field_branches %}
+      <a href="{{ uri_prefix }}/users/branch/{{ field_branch.id }}"
+        class="btn mr-1 
+        {% if field_branch.id == field_branch_id %}
+          btn-secondary
+        {% elif field_branch.status.value == 'normal' %}
+          btn-primary
+        {% elif field_branch.status.value == 'inactive' %}
+          btn-danger
+        {% endif %}
+        "
+      >
+        {{ field_branch.key }}
+    </a>
+    {% endfor %}
+  </div>
   <table id="users-table" class="table table-striped">
     <thead>
       <tr>
+        <th>{{ i18n.chat_id }}</th>
         <th>{{ i18n.username }}</th>
         {% for field in fields %}
           <th id='field-{{ field.id }}'>{{ field.key }}</th>
@@ -13,19 +31,20 @@
     <tbody>
       {% for user in users %}
         <tr id="user-{{ user.id }}">
+          <td id="user-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
           <td id="user-{{ user.id }}-username">{{ user.username }}</td>
           {% for field in fields %}
             <td id='user-{{ user.id }}-field-{{ field.id }}'>
               {% if field_id in user %}
-                {% if not user.fields[field_id].document_bucket %}
-                  {{ user.fields[field_id].value }}
-                {% else %}
+                {% if user.fields[field_id].image_bucket %}
                   <img
                     id='user-{{ user.id }}-field-{{ field.id }}-image'
                     class="img-thumbnail"
                     alt="{{ user.fields[field_id].value }}"
                     style="max-height: 200px; max-width: 200px;"
                   />
+                {% else %}
+                  <span style="white-space: pre-line">{{ user.fields[field_id].value }}</span>
                 {% endif %}
               {% endif %}
             </td>
@@ -36,14 +55,13 @@
   </table>
 
   <script>
-    $(() => {
-      setTimeout(() => {
-        {% for user in users %}
+    function load_users_images() {
+      {% for user in users %}
             {% for field in fields %}
-                {% if field_id in user and user.fields[field_id].document_bucket %}
+                {% if field_id in user and user.fields[field_id].image_bucket %}
                   const doc_id = '#user-{{ user.id }}-field-{{ field.id }}-image'
                   $.ajax({
-                    url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field_id].document_bucket }}/{{ user.fields[field_id].value }}`,
+                    url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field_id].image_bucket }}/{{ user.fields[field_id].value }}`,
                     type: 'GET',
                     tryCount:   0,
                     retryLimit: 3,
@@ -71,7 +89,20 @@
                 {% endif %}
             {% endfor %}
         {% endfor %}
-      }, 500);
+    }
+  </script>
+
+  <script>
+    $(() => {
+      function waitForKeycloakToken() {
+        if (!keycloak.hasOwnProperty('token')) {
+          console.log("Does not have token to load images and documents yet")
+          return setTimeout(waitForKeycloakToken, 250);
+        }
+        console.log("Have token to load images and documents!");
+        load_users_images();
+      }
+      waitForKeycloakToken();
     });
   </script>
 {% endblock %}

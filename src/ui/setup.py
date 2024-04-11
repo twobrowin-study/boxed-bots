@@ -23,6 +23,14 @@ tags_metadata = [
         "description": "Прокси к minio",
     },
     {
+        "name": "fields",
+        "description": "Пользовательские поля",
+    },
+    {
+        "name": "field_branches",
+        "description": "Ветки полей",
+    },
+    {
         "name": "keybaord_keys",
         "description": "Клавиши клавиатуры",
     },

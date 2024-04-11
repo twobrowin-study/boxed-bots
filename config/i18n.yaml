@@ -78,14 +78,25 @@ keyboard_key_normal:   Обычная
 keyboard_key_deferred: Отложенные вопросы
 keyboard_key_me:       Обо мне
 
-# function:      Исполняемая функция
-# function_description: Исполняемая функция
-# text_markdown: Текст
-# send_picture
-# is_active
+field_branches: Ветки полей
+fields: Поля пользователей
 
-# Поддерживается только Управление регистрацией
-# Текст
-# Картинка
-# Ссылка на диск
-# Активно?
+branch_none: Пусто
+
+is_ui_edditable:  Можно менять в UI
+is_bot_edditable: Можно менять в боте
+is_deferrable:    Можно отложить
+next_branch_id:    Следующая ветка
+
+field_branch_inactive: Не активна
+field_branch_normal:   Активна
+
+order_place:       Порядок
+branch_id:         Ветка
+question_markdown: Вопрос Markdown
+answer_options:    Варианты ответа
+image_bucket:      Бакет изображений
+document_bucket:   Бакет документа
+
+field_inactive: Не активен
+field_normal:   Активен

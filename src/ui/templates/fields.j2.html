@@ -1,0 +1,99 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <div>
+    {% for field_branch in field_branches %}
+      <a href="{{ uri_prefix }}/fields/{{ field_branch.id }}"
+        class="btn mr-1 
+        {% if field_branch.id == field_branch_id %}
+          btn-secondary
+        {% elif field_branch.status.value == 'normal' %}
+          btn-primary
+        {% elif field_branch.status.value == 'inactive' %}
+          btn-danger
+        {% endif %}
+        "
+      >
+        {{ field_branch.key }}
+    </a>
+    {% endfor %}
+  </div>
+  <table id="fields-table" class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th id="fields-key"              >{{ i18n.key }}</th>
+        <th id="fields-status"           >{{ i18n.status }}</th>
+        <th id="fields-order_place"      >{{ i18n.order_place }}</th>
+        <th id="fields-branch_id"        >{{ i18n.branch_id }}</th>
+        <th id="fields-question_markdown">{{ i18n.question_markdown }}</th>
+        <th id="fields-answer_options"   >{{ i18n.answer_options }}</th>
+        <th id="fields-image_bucket"     >{{ i18n.image_bucket }}</th>
+        <th id="fields-document_bucket"  >{{ i18n.document_bucket }}</th>
+        <th id="fields-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for field in fields %}
+        <tr id="fields-{{ field.id }}">
+          <td id="fields-{{ field.id }}-key" class="row-editable">{{ field.key }}</td>
+          <td id="fields-{{ field.id }}-status" class="row-editable">
+            <select id="fields-{{ field.id }}-status-value" class="form-select" disabled>
+              {% for status in field_status_enum %}
+                <option
+                  value="{{ status.value }}"
+                  {% if status == field.status %}selected='true'{% endif %}
+                >
+                  {{ i18n['field_' + status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="fields-{{ field.id }}-order_place" class="row-editable" style="white-space: pre-line">{{ field.order_place }}</td>
+          <td id="fields-{{ field.id }}-branch_id" class="row-editable">
+            <select id="fields-{{ field.id }}-branch_id-id_value" class="form-select" disabled>
+                {% for field_branch in field_branches %}
+                  <option value="{{ field_branch.id }}"
+                    {% if field_branch.id == field.branch_id %}selected='true'{% endif %}
+                  >
+                    {{ field_branch.key }}
+                  </option>
+                {% endfor %}
+            </select>
+          </td>
+          <td id="fields-{{ field.id }}-question_markdown" class="row-editable" style="white-space: pre-line">{% if field.question_markdown %}{{ field.question_markdown }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-answer_options"    class="row-editable" style="white-space: pre-line">{% if field.answer_options %}{{ field.answer_options }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-image_bucket"      class="row-editable" style="white-space: pre-line">{% if field.image_bucket %}{{ field.document_bucket }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-document_bucket"   class="row-editable" style="white-space: pre-line">{% if field.document_bucket %}{{ field.document_bucket }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="fields-new" class="elem-new d-none">
+        <td id="fields-new-key" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-status" class="row-editable table-info">
+          <select id="fields-new-status-value" class="form-select">
+            {% for status in field_status_enum %}
+              <option value="{{ status.value }}">{{ i18n['field_' + status.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="fields-new-order_place" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-branch_id" class="row-editable">
+          <select id="fields-new-branch_id-id_value" class="form-select">
+              {% for field_branch in field_branches %}
+                <option value="{{ field_branch.id }}"
+                  {% if field_branch.id == field_branch_id %}selected='true'{% endif %}
+                >
+                  {{ field_branch.key }}
+                </option>
+              {% endfor %}
+          </select>
+        </td>
+        <td id="fields-new-question_markdown" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-answer_options"    class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-image_bucket"      class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-document_bucket"   class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-edit"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base.j2.html" %}
 
 {% block content %}
-  <table id="keyboard_keys-table" class="table table-striped">
+  <table id="keyboard_keys-table" class="table table-striped align-middle">
     <thead>
       <tr>
         <th id="keyboard_keys-key"          >{{ i18n.key }}</th>
@@ -28,7 +28,11 @@
             </select>
           </td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-text_markdown" class="row-editable" style="white-space: pre-line">{{ keyboard_key.text_markdown }}</td>
-          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable"><a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a></td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable">
+            {% if keyboard_key.photo_link %}
+              <a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a>
+            {% endif %}
+          </td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}

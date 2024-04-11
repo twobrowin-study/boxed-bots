@@ -16,6 +16,7 @@ from utils.custom_types import (
     BotStatusEnum,
     GroupStatusEnum,
     UserStatusEnum,
+    FieldBranchStatusEnum,
     FieldStatusEnum,
     KeyboardKeyStatusEnum,
 )
@@ -48,6 +49,23 @@ class Group(Base):
     status:      Mapped[GroupStatusEnum] = mapped_column(nullable=False,   default=GroupStatusEnum.INACTIVE)
     description: Mapped[str|None]        = mapped_column(default=None)
 
+class FieldBranch(Base):
+    """
+    Ветки вопросов пользователей
+    """
+
+    __tablename__ = "field_branches"
+
+    id:  Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    key: Mapped[str] = mapped_column(nullable=False,   index=True, unique=True)
+    status: Mapped[FieldBranchStatusEnum] = mapped_column(nullable=False,   default=FieldBranchStatusEnum.INACTIVE)
+
+    is_ui_edditable:  Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_bot_edditable: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deferrable:    Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    next_branch_id = Column(Integer, ForeignKey('field_branches.id'), nullable=True)
+
 class Field(Base):
     """
     Поле данных пользователя
@@ -58,10 +76,15 @@ class Field(Base):
     id:     Mapped[int]             = mapped_column(primary_key=True, nullable=False)
     key:    Mapped[str]             = mapped_column(nullable=False,   index=True, unique=True)
     status: Mapped[FieldStatusEnum] = mapped_column(nullable=False,   default=FieldStatusEnum.INACTIVE)
-    branch: Mapped[str]             = mapped_column(nullable=False,   default=None, index=True)
+
+    order_place: Mapped[int] = mapped_column(nullable=False, default=0)
+    
+    branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=False)
+    branch    = relationship('FieldBranch', lazy='selectin')
 
     question_markdown: Mapped[str|None] = mapped_column(default=None)
     answer_options:    Mapped[str|None] = mapped_column(default=None)
+    image_bucket:      Mapped[str|None] = mapped_column(default=None)
     document_bucket:   Mapped[str|None] = mapped_column(default=None)
 
 class User(Base):
