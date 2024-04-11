@@ -8,7 +8,6 @@ from datetime import datetime
 from loguru import logger
 
 from io import BytesIO
-import filetype
 
 from utils.db_model import (
     User,
@@ -140,9 +139,12 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
         curr_field: Field|None = user.curr_field
 
         if curr_field:
-            if curr_field.document_bucket:
+            if curr_field.document_bucket or curr_field.image_bucket:
                 return await update.message.reply_markdown(curr_field.question_markdown)
 
+            # TODO: Научится получать вопрос из следующей ветки
+            # TODO: Научится учитывать неотображаемые вопросы для того
+            #       чтобы можно было до их заполнения проставить активность пользователя
             next_field = await get_next_field_question_in_branch(session, curr_field)
 
             if next_field:
@@ -157,9 +159,6 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
                 )
                 
                 user_update = {'curr_field_id': next_field.id}
-
-                if curr_field.status == FieldStatusEnum.MAIN and next_field.status != FieldStatusEnum.MAIN:
-                    user_update['status'] = UserStatusEnum.ACTIVE
             
             elif not next_field:
                 logger.info((
@@ -171,16 +170,17 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
                     reply_markup = await get_keyboard_of_user(session, user)
                 )
                 
-                user_update = {'curr_field_id': None}
-
-                if curr_field.status == FieldStatusEnum.MAIN:
-                    user_update['status'] = UserStatusEnum.ACTIVE
+                user_update = {
+                    'curr_field_id': None,
+                    'status':        UserStatusEnum.ACTIVE
+                }
                 
             await session.execute(
                 sql_udate(User)
                 .where(User.id == user.id)
                 .values(**user_update)
             )
+
             await session.execute(
                 insert(UserFieldValue)
                 .values(
@@ -198,15 +198,15 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
         if keyboard_key:
             logger.info(f"Got keyboard key heat from user {chat_id=} and {username=} {keyboard_key.key=}")
 
-            if keyboard_key.status == KeyboardKeyStatusEnum.ME:
-                users_field_values = {
-                    field_value.field_id: {
-                        'key':   field_value.field.key,
-                        'value': field_value.value
-                    }
-                    for field_value in user.fields_values
-                }
-                print(sorted(users_field_values))
+            # if keyboard_key.status == KeyboardKeyStatusEnum.ME:
+            #     users_field_values = {
+            #         field_value.field_id: {
+            #             'key':   field_value.field.key,
+            #             'value': field_value.value
+            #         }
+            #         for field_value in user.fields_values
+            #     }
+            #     print(sorted(users_field_values))
 
             if keyboard_key.photo_link in [None, '']:
                 return await update.message.reply_markdown(
@@ -252,7 +252,7 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
         curr_field: Field|None = user.curr_field
 
         if curr_field:
-            if not curr_field.document_bucket:
+            if not (curr_field.document_bucket or curr_field.image_bucket):
                 return await update.message.reply_markdown(curr_field.question_markdown)
 
             next_field = await get_next_field_question_in_branch(session, curr_field)
@@ -269,9 +269,6 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                 )
                 
                 user_update = {'curr_field_id': next_field.id}
-
-                if curr_field.status == FieldStatusEnum.MAIN and next_field.status != FieldStatusEnum.MAIN:
-                    user_update['status'] = UserStatusEnum.ACTIVE
             
             elif not next_field:
                 logger.info((
@@ -283,10 +280,10 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                     reply_markup = await get_keyboard_of_user(session, user)
                 )
                 
-                user_update = {'curr_field_id': None}
-
-                if curr_field.status == FieldStatusEnum.MAIN:
-                    user_update['status'] = UserStatusEnum.ACTIVE
+                user_update = {
+                    'curr_field_id': None,
+                    'status':        UserStatusEnum.ACTIVE
+                }
                 
             await session.execute(
                 sql_udate(User)
@@ -302,11 +299,15 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
             in_memory = BytesIO()
             await file.download_to_memory(in_memory)
             
-            in_memory.seek(0)
-            extension = filetype.guess_extension(in_memory)
-            filename  = await get_user_field_value_by_key(session, user, settings.user_document_name_field)       
+            saved_filename = await get_user_field_value_by_key(session, user, settings.user_document_name_field)
 
-            full_filename = f"{filename}.{extension}"
+            bucket = curr_field.document_bucket or curr_field.image_bucket
+
+            full_filename = await app.provider.minio.upload_with_thumbnail_and_return_filename(
+                bucket                = bucket,
+                filename_wo_extension = saved_filename,
+                bio                   = in_memory
+            )
 
             await session.execute(
                 insert(UserFieldValue)
@@ -316,13 +317,6 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                     value      = full_filename,
                     message_id = update.message.id
                 )
-            )
-
-            in_memory.seek(0)
-            await app.provider.minio.upload(
-                bucket   = curr_field.document_bucket,
-                filename = full_filename,
-                bio      = in_memory
             )
             
             return await session.commit()

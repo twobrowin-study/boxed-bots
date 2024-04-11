@@ -35,16 +35,16 @@
           <td id="user-{{ user.id }}-username">{{ user.username }}</td>
           {% for field in fields %}
             <td id='user-{{ user.id }}-field-{{ field.id }}'>
-              {% if field_id in user %}
-                {% if user.fields[field_id].image_bucket %}
+              {% if field.id in user.fields %}
+                {% if field.image_bucket %}
                   <img
                     id='user-{{ user.id }}-field-{{ field.id }}-image'
                     class="img-thumbnail"
-                    alt="{{ user.fields[field_id].value }}"
+                    alt="{{ user.fields[field.id].value }}"
                     style="max-height: 200px; max-width: 200px;"
                   />
                 {% else %}
-                  <span style="white-space: pre-line">{{ user.fields[field_id].value }}</span>
+                  <span style="white-space: pre-line">{{ user.fields[field.id].value }}</span>
                 {% endif %}
               {% endif %}
             </td>
@@ -58,10 +58,11 @@
     function load_users_images() {
       {% for user in users %}
             {% for field in fields %}
-                {% if field_id in user and user.fields[field_id].image_bucket %}
+                {% if field.id in user.fields and user.fields[field.id].image_bucket %}
                   const doc_id = '#user-{{ user.id }}-field-{{ field.id }}-image'
+                  console.log(`Start loading image ${doc_id}`);
                   $.ajax({
-                    url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field_id].image_bucket }}/{{ user.fields[field_id].value }}`,
+                    url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field.id].image_bucket }}/{{ user.fields[field.id].value }}`,
                     type: 'GET',
                     tryCount:   0,
                     retryLimit: 3,

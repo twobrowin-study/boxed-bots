@@ -145,7 +145,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
         fields_branches = list(fields_branches_selected.scalars().all())
         fields          = list(fields_selected.scalars().all())
         users = [ user.to_dict() for user in users_selected.scalars() ]
-        
+
         return template(
             request=request, template_name="users.j2.html",
             additional_context = {

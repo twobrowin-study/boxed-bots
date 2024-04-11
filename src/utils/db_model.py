@@ -114,8 +114,9 @@ class User(Base):
             'username': self.username,
             'fields': {
                 field_value.field_id: {
-                    'value': field_value.value,
-                    'document_bucket': field_value.field.document_bucket
+                    'value':           field_value.value,
+                    'document_bucket': field_value.field.document_bucket,
+                    'image_bucket':    field_value.field.image_bucket
                 }
                 for field_value in self.fields_values
             }

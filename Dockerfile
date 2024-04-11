@@ -70,7 +70,7 @@ ENV VIRTUAL_ENV=${BOX_BOT_HOME}/.venv \
 
 RUN apt-get update && apt-get install software-properties-common -y \
  && add-apt-repository ppa:deadsnakes/ppa -y \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y python3.12 \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y python3.12 python3-pil \
  && DEBIAN_FRONTEND=noninteractive apt-get purge -y software-properties-common \
  && rm -rf /var/lib/apt/lists/*
 

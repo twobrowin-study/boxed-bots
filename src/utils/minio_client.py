@@ -6,6 +6,8 @@ import json
 import filetype
 import httpx
 
+from PIL import Image
+
 class MinIOClient:
     """
     Обёртка для удобного асинхронного взаимодействия с MINIO
@@ -25,22 +27,11 @@ class MinIOClient:
         async with httpx.AsyncClient() as client:
             return await client.get(f"{self.base_url}/{bucket}/{filename}")
 
-    def _guess_content_type(self, bio: BytesIO) -> str:
-        """
-        Попробовать угадать MIME тип файла или разочароваться и вернуть application/octet-stream
-        """
-        bio.seek(0)
-        try:
-            return filetype.guess_mime(bio)
-        except Exception:
-            return 'application/octet-stream'
-
-    async def _put_object(self, bucket: str, filename: str, bio: BytesIO) -> None:
+    async def _put_object(self, bucket: str, filename: str, bio: BytesIO, content_type: str) -> None:
         """
         Внутренняя функция для асинхроанного помещения файла в заданный бакет
         """
         def _put_object_sync():
-            content_type = self._guess_content_type(bio)
             bio.seek(0)
             self._client.put_object(
                 bucket_name=bucket,
@@ -51,14 +42,51 @@ class MinIOClient:
             )
         await asyncio.get_event_loop().run_in_executor(None, _put_object_sync)
 
-    async def upload(self, bucket: str, filename: str, bio: BytesIO) -> None:
+    async def upload(self, bucket: str, filename: str, bio: BytesIO, content_type: str) -> None:
         """
         Асинхронное помещение файла в бакет
         """
         async with self._semaphore:
             logger.info(f"Uploading {filename} to MinIO into bukcket {bucket}")
-            await self._put_object(bucket, filename, bio)
+            await self._put_object(bucket, filename, bio, content_type)
         logger.success(f"Done uploading {filename} to MinIO into bukcket {bucket}")
+    
+    async def upload_with_thumbnail_and_return_filename(self, bucket: str, filename_wo_extension: str, bio: BytesIO) -> str:
+        """
+        Асинхронное помещение файла в бакет
+
+        Если файл является изображением - вычисляется также уменьшенная версия и помещается рядом
+
+        Возвращается имя файла или уменьшенной версии для сохранения в БД 
+        """
+        bio.seek(0)
+        try:
+            guessed_file = filetype.guess(bio)
+            content_type = guessed_file.mime if guessed_file else 'application/octet-stream'
+            extension    = guessed_file.extension if guessed_file else 'bin'
+        except TypeError:
+            content_type = 'application/octet-stream'
+            extension    = 'bin'
+
+        filename = f"{filename_wo_extension}.{extension}"
+        await self.upload(bucket, filename, bio, content_type)
+
+        if not content_type.startswith('image'):
+            return filename
+        
+        image_format = content_type.removeprefix('image/').upper()
+        
+        bio.seek(0)
+        with Image.open(bio, formats=[image_format]) as image:
+            image.thumbnail((256, 256))
+
+            thumbnail_bio = BytesIO()
+            image.save(thumbnail_bio, format=image_format)
+            
+            thumbnail_filename = f"{filename_wo_extension}_thumbnail.{extension}"
+            await self.upload(bucket, thumbnail_filename, thumbnail_bio, content_type)
+
+            return thumbnail_filename
 
     async def download(self, bucket: str, filename: str) -> BytesIO | None:
         """
