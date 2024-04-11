@@ -19,6 +19,8 @@ from utils.custom_types import (
     FieldBranchStatusEnum,
     FieldStatusEnum,
     KeyboardKeyStatusEnum,
+    UserFieldDataPrepared,
+    UserDataPrepared
 )
 
 from datetime import datetime
@@ -107,20 +109,29 @@ class User(Base):
 
     fields_values = relationship('UserFieldValue', backref='user', lazy='selectin')
 
-    def to_dict(self) -> dict[str, str|dict]:
-        return {
-            'id': self.id,
-            'chat_id': self.chat_id,
-            'username': self.username,
-            'fields': {
-                field_value.field_id: {
-                    'value':           field_value.value,
-                    'document_bucket': field_value.field.document_bucket,
-                    'image_bucket':    field_value.field.image_bucket
-                }
-                for field_value in self.fields_values
+    change_field_message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
+
+    def prepare(self) -> UserDataPrepared:
+        return UserDataPrepared(
+            id       = self.id,
+            chat_id  = self.chat_id,
+            username = self.username,
+            fields   = self.prepare_fields()
+        )
+
+    def prepare_fields(self) -> dict[int, UserFieldDataPrepared]:
+        fields = {}
+        for field_value in self.fields_values:
+            field_value: UserFieldValue
+            field: Field = field_value.field
+            fields |= {
+                field_value.field_id: UserFieldDataPrepared(
+                    value = field_value.value,
+                    document_bucket = field.document_bucket,
+                    image_bucket    = field.image_bucket
+                )
             }
-        }
+        return fields
 
 class UserFieldValue(Base):
     """

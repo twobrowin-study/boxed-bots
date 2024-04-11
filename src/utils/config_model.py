@@ -188,6 +188,9 @@ class I18n(BaseModel, extra="forbid"):
     field_inactive: str
     field_normal:   str
 
+    image:    str
+    document: str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния

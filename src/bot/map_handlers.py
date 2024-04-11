@@ -1,7 +1,8 @@
 from telegram.ext import (
     MessageHandler,
     ChatMemberHandler,
-    CommandHandler
+    CommandHandler,
+    CallbackQueryHandler
 )
 
 from telegram.ext.filters import (
@@ -25,7 +26,12 @@ from bot.handlers.group import (
 from bot.handlers.user import (
     user_start_help_handler,
     user_message_text_handler,
-    user_message_photo_document_handler
+    user_message_photo_document_handler,
+    user_change_state_callback
+)
+
+from bot.callback_constants import (
+    UserChangeFieldCallback
 )
 
 def map_service_mode_handlers(app: BBApplication) -> None:
@@ -73,5 +79,9 @@ def map_default_handlers(app: BBApplication) -> None:
     app.add_handlers([
         MessageHandler(ChatType.PRIVATE & TEXT,                                user_message_text_handler,           block=False),
         MessageHandler(ChatType.PRIVATE & (PHOTO|Document.IMAGE|Document.ZIP), user_message_photo_document_handler, block=False),
+    ], group=app.UPDATE_GROUP_USER_REQUEST)
+
+    app.add_handlers([
+        CallbackQueryHandler(user_change_state_callback, pattern=UserChangeFieldCallback.PATTERN, block=False),
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 

@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import NamedTuple
 
 class BotStatusEnum(Enum):
     """
@@ -56,3 +57,14 @@ class KeyboardKeyStatusEnum(Enum):
     NORMAL   = 'normal'   # Обычная клавиша
     DEFERRED = 'deferred' # Вернуться к отложенному вопросу - отображается только когда у пользователя заполненно поле отложенного вопроса
     ME       = 'me'       # Посмотреть свою пользовательскую запись (основные и откладываемые вопросы)
+
+class UserFieldDataPrepared(NamedTuple):
+    value: str
+    document_bucket: str
+    image_bucket:    str
+
+class UserDataPrepared(NamedTuple):
+    id:       int
+    chat_id:  int
+    username: str
+    fields:   dict[int, UserFieldDataPrepared]

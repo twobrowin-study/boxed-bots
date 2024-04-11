@@ -100,3 +100,6 @@ document_bucket:   Бакет документа
 
 field_inactive: Не активен
 field_normal:   Активен
+
+image: Изображение
+document: Документ

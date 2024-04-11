@@ -144,7 +144,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
 
         field_branches = list(field_branches_selected.scalars().all())
         fields          = list(fields_selected.scalars().all())
-        users = [ user.to_dict() for user in users_selected.scalars() ]
+        users = [ user.prepare() for user in users_selected.scalars() ]
 
         return template(
             request=request, template_name="users.j2.html",
@@ -242,6 +242,12 @@ async def fields(branch_id: int, request: Request) -> JSONResponse:
     fields_attrs, bad_responce = prepare_attrs_object_from_request(request_data, FieldStatusEnum, ['order_place'])
     if bad_responce:
         return bad_responce
+    
+    for _,field in fields_attrs.items():
+        if 'document_bucket' in field and 'image_bucket' in field:
+            if field['document_bucket'] and field['image_bucket']:
+                logger.error("Trying to save image and document buckets at the same time")
+                return JSONResponse({'error': True}, status_code=500)
 
     return await try_to_save_attrs(Field, fields_attrs)
 

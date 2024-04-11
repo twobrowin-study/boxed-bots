@@ -21,7 +21,7 @@ async def group_send_to_all_superadmin_awaited(app: BBApplication, message: str,
     """
     await send_to_all_coroutines_awaited(
         app=app, table=Group,
-        selector=Group.status == GroupStatusEnum.SUPER_ADMIN,
+        selector=(Group.status == GroupStatusEnum.SUPER_ADMIN),
         message=message, parse_mode=parse_mode
     )
 
@@ -31,7 +31,7 @@ async def group_send_to_all_superadmin_tasked(app: BBApplication, message: str, 
     """
     await send_to_all_coroutines_tasked(
         app=app, table=Group,
-        selector=Group.status == GroupStatusEnum.SUPER_ADMIN,
+        selector=(Group.status == GroupStatusEnum.SUPER_ADMIN),
         message=message, parse_mode=parse_mode,
         update={'update': 'group_send_to_all_superadmins_tasked', 'message': message}
     )
@@ -42,7 +42,7 @@ async def group_send_to_all_admin_tasked(app: BBApplication, message: str, parse
     """
     await send_to_all_coroutines_tasked(
         app=app, table=Group,
-        selector=Group.status in [GroupStatusEnum.ADMIN, GroupStatusEnum.SUPER_ADMIN],
+        selector=((Group.status == GroupStatusEnum.ADMIN) | (Group.status == GroupStatusEnum.SUPER_ADMIN)) ,
         message=message, parse_mode=parse_mode,
         update={'update': 'group_send_to_all_admins_tasked', 'message': message}
     )
@@ -53,7 +53,7 @@ async def group_send_to_all_normal_tasked(app: BBApplication, message: str, pars
     """
     await send_to_all_coroutines_tasked(
         app=app, table=Group,
-        selector=Group.status == GroupStatusEnum.NORMAL,
+        selector=(Group.status == GroupStatusEnum.NORMAL),
         message=message, parse_mode=parse_mode,
         update={'update': 'group_send_to_all_normal_tasked', 'message': message}
     )

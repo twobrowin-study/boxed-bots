@@ -1,13 +1,7 @@
 from telegram import (
-    Update,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
 )
-from telegram.ext import ContextTypes
-from telegram.constants import ParseMode
-
-from loguru import logger
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
@@ -33,7 +27,7 @@ async def get_keyboard_of_user(session: AsyncSession, _: User) -> ReplyKeyboardM
         .where(
             (KeyboardKey.status == KeyboardKeyStatusEnum.NORMAL) |
             (
-                (KeyboardKey.status in [KeyboardKeyStatusEnum.ME, KeyboardKeyStatusEnum.DEFERRED]) &
+                (KeyboardKey.status.in_((KeyboardKeyStatusEnum.ME, KeyboardKeyStatusEnum.DEFERRED))) &
                 (KeyboardKey.branch_id is not None)
             )
         )
@@ -61,42 +55,4 @@ async def get_keyboard_key_by_key_text(session: AsyncSession, key: str) -> Keybo
         .where(KeyboardKey.key == key)
     )
     return selected.scalar_one_or_none()
-
-async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, session: AsyncSession) -> bool:
-    """
-    Отвечает на пользовательский запрос на кнопку клавиатуры
-    """
-    chat_id  = update.effective_user.id
-    username = update.effective_user.username
-
-    keyboard_key = await get_keyboard_key_by_key_text(session, update.message.text)
-    
-    if not keyboard_key:
-        return False
-    
-    logger.info(f"Got keyboard key heat from user {chat_id=} and {username=} {keyboard_key.key=}")
-
-    if keyboard_key.status == KeyboardKeyStatusEnum.ME:
-        print(user.to_dict())
-
-    if keyboard_key.photo_link in [None, '']:
-        return await update.message.reply_markdown(
-            keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user)
-        )
-    elif keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) <= 1024:
-        return await update.message.reply_photo(
-            keyboard_key.photo_link,
-            caption = keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user),
-            parse_mode = ParseMode.MARKDOWN
-        )
-    elif keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) > 1024:
-        await update.message.reply_photo(keyboard_key.photo_link)
-        return await update.message.reply_markdown(
-            keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user)
-        )
-    
-    return True
     
