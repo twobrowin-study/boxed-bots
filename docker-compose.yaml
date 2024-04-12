@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   box-bot:
-    image: twobrowin/box-bot:1.1.0
+    image: twobrowin/box-bot:1.1.7
     build:
      context: .
     ports:

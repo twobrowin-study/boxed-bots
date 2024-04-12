@@ -61,7 +61,7 @@ ENV MINIO_RELEASE="2024-04-06T05-26-02Z" \
 
 RUN wget https://dl.min.io/server/minio/release/linux-amd64/minio.RELEASE.${MINIO_RELEASE} -O ${MINIO_BINARY} && \
     chmod +x ${MINIO_BINARY} && \
-    useradd -ms /bin/bash ${MINIO_USER}
+    useradd -ms /bin/bash ${MINIO_USER} -G ${PG_USER}
 
 ENV VIRTUAL_ENV=${BOX_BOT_HOME}/.venv \
     PATH="${VIRTUAL_ENV}/bin:$PATH" \
