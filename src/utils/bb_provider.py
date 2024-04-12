@@ -28,7 +28,7 @@ class BBProvider:
                 pool_use_lifo=True
             )
         self.db_session = async_sessionmaker(bind = self.db_engine)
-        self.minio = MinIOClient(self.config.minio_root_user, self.config.minio_root_password)
+        self.minio = MinIOClient(self.config.minio_root_user, self.config.minio_root_password, self.config.minio_secure, self.config.minio_host)
     
     async def _get_kv_object(self, session: AsyncSession, object_class: type[BotStatus|Settings]) -> BotStatus|Settings:
         """

@@ -162,23 +162,18 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
 # MINIO
 ####################################################################################################
 
-@prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
-async def minio(bucket: str, filename: str) -> Response:
-    """
-    Прокси к minio
-    """
-    response = await provider.minio.proxy_content(bucket, filename)
-    return Response(content=response.content, headers=response.headers, status_code=response.status_code)
-
 @prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
 async def minio(bucket: str, filename: str) -> Response:
     """
     Прокси к minio, который возвращает ответ в формате base64
     """
-    response = await provider.minio.proxy_content(bucket, filename)
+    bio, content_type = await provider.minio.download(bucket, filename)
+    if not bio:
+        return JSONResponse({'error': True}, status_code=500)
+    bio.seek(0)
     return JSONResponse(content = {
-        'image': base64.b64encode(response.content).decode(),
-        'mime':  response.headers['content-type']
+        'image': base64.b64encode(bio.getvalue()).decode(),
+        'mime':  content_type
     })
 
 

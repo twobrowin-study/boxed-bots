@@ -2,9 +2,7 @@ import asyncio
 from io import BytesIO
 from minio import Minio, S3Error
 from loguru import logger
-import json
 import filetype
-import httpx
 
 from PIL import Image
 
@@ -13,19 +11,15 @@ class MinIOClient:
     Обёртка для удобного асинхронного взаимодействия с MINIO
     """
 
-    def __init__(self, access_key: str, secret_key: str) -> None:
-        self.host = 'localhost:9000'
-        self.base_url = f"http://{self.host}"
+    def __init__(self, access_key: str, secret_key: str, secure: bool, host: str) -> None:
+        self.host = host
+        self.base_url = f"{'https' if secure else 'http'}://{self.host}"
         self._client = Minio(self.host,
             access_key=access_key,
             secret_key=secret_key,
-            secure=False
+            secure=secure
         )
         self._semaphore = asyncio.Semaphore(50)
-    
-    async def proxy_content(self, bucket: str, filename: str) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
-            return await client.get(f"{self.base_url}/{bucket}/{filename}")
 
     async def _put_object(self, bucket: str, filename: str, bio: BytesIO, content_type: str) -> None:
         """
@@ -88,7 +82,7 @@ class MinIOClient:
 
             return thumbnail_filename
 
-    async def download(self, bucket: str, filename: str) -> BytesIO | None:
+    async def download(self, bucket: str, filename: str) -> tuple[BytesIO | None, str]:
         """
         Асинхронная загрузка файла из бакета
         """
@@ -100,18 +94,20 @@ class MinIOClient:
         try:
             response = await asyncio.get_event_loop().run_in_executor(None, _get_object)
             logger.success(f"Done downloading {filename} from MinIO {bucket}")
-            file_bytes = BytesIO(response.read())
+            file_bytes   = BytesIO(response.read())
+            content_type = response.getheader('content-type')
         except S3Error as e:
             if e.code == 'NoSuchKey':
                 logger.info(f"File {filename} not found in MinIO {bucket}")
-                file_bytes = None
+                file_bytes   = None
+                content_type = 'application/octet-stream'
             else:
                 raise e
         else:
             response.close()
             response.release_conn()
 
-        return file_bytes
+        return file_bytes, content_type
     
     async def create_bucket(self, bucket: str) -> None:
         """
@@ -121,17 +117,5 @@ class MinIOClient:
         def _create_bucket():
             if not self._client.bucket_exists(bucket):
                 self._client.make_bucket(bucket)
-            policy = {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Principal": {"AWS": "*"},
-                        "Action": "s3:GetObject",
-                        "Resource": f"arn:aws:s3:::{bucket}/*",
-                    },
-                ],
-            }
-            self._client.set_bucket_policy(bucket, json.dumps(policy))
         await asyncio.get_event_loop().run_in_executor(None, _create_bucket)
         logger.success(f"Created MinIO bucket {bucket} or updated policyes")

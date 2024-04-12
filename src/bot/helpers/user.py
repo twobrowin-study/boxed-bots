@@ -456,12 +456,11 @@ async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT
             logger.info(f"Trying to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             try:
-                await update.message.reply_document(
-                    await app.provider.minio.download(
-                        user_fields[field.id].document_bucket,
-                        user_fields[field.id].value
-                    )
+                bio, _ = await app.provider.minio.download(
+                    user_fields[field.id].document_bucket,
+                    user_fields[field.id].value
                 )
+                await update.message.reply_document(bio)
             except Exception:
                 logger.warning('Was not able to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}')
 
@@ -475,12 +474,11 @@ async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT
             logger.info(f"Trying to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             try:
-                await update.message.reply_photo(
-                    await app.provider.minio.download(
-                        user_fields[field.id].image_bucket,
-                        user_fields[field.id].value.replace('_thumbnail', '')
-                    )
+                bio, _ = await app.provider.minio.download(
+                    user_fields[field.id].image_bucket,
+                    user_fields[field.id].value.replace('_thumbnail', '')
                 )
+                await update.message.reply_photo(bio)
             except Exception:
                 logger.warning('Was not able to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}')
 

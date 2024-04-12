@@ -216,6 +216,8 @@ class ConfigYaml(BaseSettings):
     
     minio_root_user:     str
     minio_root_password: str
+    minio_secure: bool
+    minio_host:   str
 
     keycloak: Keycloak
     defaults: Defaults
@@ -237,6 +239,10 @@ def create_config() -> ConfigYaml:
 
     if not full_config:
         full_config = {}
+    
+    full_config['minio_secure'] = False
+    if os.getenv('MINIO_CERTDIR'):
+        full_config['minio_secure'] = True
 
     with open(f"{BOX_BOT_HOME}/config/defaults.yaml", "r") as stream:
         full_config['defaults'] = yaml.safe_load(stream)
