@@ -191,6 +191,8 @@ class I18n(BaseModel, extra="forbid"):
     image:    str
     document: str
 
+    download_users_report: str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния

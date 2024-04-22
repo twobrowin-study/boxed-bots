@@ -4,14 +4,19 @@ from fastapi.responses import (
     PlainTextResponse,
     HTMLResponse,
     RedirectResponse,
-    JSONResponse
+    JSONResponse,
+    StreamingResponse
 )
 from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_302_FOUND
 
+import io
 import base64
+import pandas as pd
+from datetime import datetime
+from xlsxwriter.worksheet import Worksheet
 
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from loguru import logger
@@ -156,6 +161,51 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                 'users':           users
             }
         )
+
+@prefix_router.get("/users/report/xslx", tags=["users"], dependencies=[Depends(verify_token)])
+async def users(request: Request) -> Response:
+    """
+    Возвращает отчёт по пользователям в формате xlsx
+    """
+    logger.info("Starting prepare of users full report")
+
+    async with provider.db_session() as session:
+        users_selected = await session.execute(
+            select(User)
+            .order_by(User.id.asc())
+        )
+        users_df = pd.DataFrame([ user.to_plain_dict() for user in users_selected.scalars() ])
+
+        logger.debug(f"Users df:\n{users_df}")
+        
+        filename = f"{datetime.now().strftime('%Y_%m_%d__%H_%M_%S')}__{provider.config.path_prefix.replace('/', '')}_report.xlsx"
+        headers = {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+
+        sheet_name = provider.config.i18n.download_users_report
+        
+        report_bio = io.BytesIO()
+        with pd.ExcelWriter(report_bio) as writer:
+            users_df.to_excel(writer, startrow=0, merge_cells=False, sheet_name=sheet_name, index=False)
+
+            worksheet: Worksheet = writer.sheets[sheet_name]
+            row_count    = len(users_df.index)
+            column_count = len(users_df.columns)
+            
+            worksheet.autofilter(0, 0, row_count-1, column_count-1)  
+            
+            for idx, col in enumerate(users_df):
+                series = users_df[col]
+                max_len = max((
+                    series.astype(str).map(len).max(),
+                    len(str(series.name))
+                    )) + 5
+                worksheet.set_column(idx, idx, max_len)
+
+        report_bio.seek(0)
+        return StreamingResponse(report_bio, headers=headers, media_type=headers['Content-Type'])
 
 
 ####################################################################################################

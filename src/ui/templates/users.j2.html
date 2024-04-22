@@ -18,6 +18,10 @@
     </a>
     {% endfor %}
   </div>
+  <div><br/></div>
+  <div>
+    <button id="users-download-report" class="btn mr-1 btn-success">{{ i18n.download_users_report }}</button>
+  </div>
   <table id="users-table" class="table table-striped">
     <thead>
       <tr>
@@ -30,15 +34,15 @@
     </thead>
     <tbody>
       {% for user in users %}
-        <tr id="user-{{ user.id }}">
-          <td id="user-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
-          <td id="user-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
+        <tr id="users-{{ user.id }}">
+          <td id="users-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
+          <td id="users-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
           {% for field in fields %}
-            <td id='user-{{ user.id }}-field-{{ field.id }}'>
+            <td id='users-{{ user.id }}-field-{{ field.id }}'>
               {% if field.id in user.fields %}
                 {% if field.image_bucket %}
                   <img
-                    id='user-{{ user.id }}-field-{{ field.id }}-image'
+                    id='users-{{ user.id }}-field-{{ field.id }}-image'
                     class="img-thumbnail"
                     alt="{{ user.fields[field.id].value }}"
                     style="max-height: 200px; max-width: 200px;"
@@ -55,12 +59,43 @@
   </table>
 
   <script>
+    $(() => {
+      $('#users-download-report').click(() => {
+        console.log("Start download full user report")
+        $.ajax({
+          url: `{{ uri_prefix }}/users/report/xslx`,
+          type: 'GET',
+          headers: {
+            Accept:        "application/vnd.ms-excel",
+            Authorization: `Bearer ${keycloak.token}`
+          },
+          xhrFields: {
+              'responseType': 'blob'
+          },
+          success: (data, status, xhr) => {
+            var link = document.createElement('a'),
+                filename = 'file.xlsx';
+            if(xhr.getResponseHeader('Content-Disposition')){//имя файла
+                filename = xhr.getResponseHeader('Content-Disposition');
+                filename=filename.match(/filename="(.*?)"/)[1];
+                filename=decodeURIComponent(escape(filename));
+            }
+            link.href = URL.createObjectURL(data);
+            link.download = filename;
+            link.click();
+          }
+        })
+      })
+    })
+  </script>
+
+  <script>
     function load_users_images() {
       {% for user in users %}
             {% for field in fields %}
                 {% if field.id in user.fields and user.fields[field.id].image_bucket %}
                   $(() => {
-                    const doc_id = '#user-{{ user.id }}-field-{{ field.id }}-image'
+                    const doc_id = '#users-{{ user.id }}-field-{{ field.id }}-image'
                     console.log(`Start loading image ${doc_id}`);
                     $.ajax({
                       url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field.id].image_bucket }}/{{ user.fields[field.id].value }}`,

@@ -74,7 +74,7 @@ text_markdown: Тест разметки markdwon
 photo_link:    Ссылка на изображение
 
 keyboard_key_inactive: Не активна
-keyboard_key_normal:   Обычная
+keyboard_key_normal:   Обычная кнопка
 keyboard_key_deferred: Отложенные вопросы
 keyboard_key_me:       Обо мне
 
@@ -103,3 +103,5 @@ field_normal:   Активен
 
 image: Изображение
 document: Документ
+
+download_users_report: Выгрузка пользователей

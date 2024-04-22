@@ -111,6 +111,18 @@ class User(Base):
 
     change_field_message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
 
+    def to_plain_dict(self) -> dict:
+        user_dict = {
+            'id':       self.id,
+            'chat_id':  self.chat_id,
+            'username': self.username
+        }
+        for field_value in self.fields_values:
+            field_value: UserFieldValue
+            field: Field = field_value.field
+            user_dict |= {field.key: field_value.value}
+        return user_dict
+
     def prepare(self) -> UserDataPrepared:
         return UserDataPrepared(
             id       = self.id,
