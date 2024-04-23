@@ -18,7 +18,7 @@ from utils.db_model import (
 from utils.custom_types import NotificationStatusEnum
 
 from bot.handlers.group import group_send_to_all_superadmin_tasked
-from bot.helpers.keyboards import get_awaliable_inline_keyboard_for_user
+from bot.helpers.keyboards import get_awaliable_inline_keyboard_for_user, get_keyboard_of_user
 
 async def notify_job(context: CallbackContext) -> None:
     """
@@ -119,12 +119,18 @@ async def notify_job(context: CallbackContext) -> None:
 
             users_to_perform_notifications = users_to_perform_notifications_selected.scalars().all()
             for user in users_to_perform_notifications:
+                reply_markup = (
+                    await get_awaliable_inline_keyboard_for_user(reply_message, user, session)
+                ) or (
+                    await get_keyboard_of_user(session, user)
+                )
+
                 app.create_task(
                     bot.send_message(
                         chat_id = user.chat_id,
                         text    = reply_message.text_markdown,
                         parse_mode   = ParseMode.MARKDOWN,
-                        reply_markup = await get_awaliable_inline_keyboard_for_user(reply_message, user, session)
+                        reply_markup = reply_markup
                     ),
                     update={
                         'user_id': user.id,
