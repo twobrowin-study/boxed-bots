@@ -68,6 +68,7 @@ async def get_keyboard_of_user(
                 (user.deferred_field_id is not None or always_add_defered_keys)
             )
         )
+        .order_by(KeyboardKey.id.asc())
     )
     keyboard_keys     = list(selected.scalars())
     keyboard_keys_len = len(keyboard_keys)

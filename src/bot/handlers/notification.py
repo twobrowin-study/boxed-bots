@@ -47,7 +47,7 @@ async def notify_job(context: CallbackContext) -> None:
 
         for planned_notification in notifications_to_plan:
             planned_notification: Notification
-            logger.info(f"Planned notification {planned_notification.id} and performing notification to admins")
+            logger.info(f"Planned notification {planned_notification.id=} and performing notification to admins")
 
             reply_message: ReplyableConditionMessage = planned_notification.reply_condition_message
             condition_bool_field: Field = reply_message.condition_bool_field
@@ -91,7 +91,7 @@ async def notify_job(context: CallbackContext) -> None:
 
         for planned_notification in notifications_to_perform:
             planned_notification: Notification
-            logger.info(f"Performing notification {planned_notification.id} and performing notification to admins")
+            logger.info(f"Performing notification {planned_notification.id=} and performing notification to admins")
 
             reply_message: ReplyableConditionMessage = planned_notification.reply_condition_message
             condition_bool_field: Field = reply_message.condition_bool_field
@@ -119,6 +119,7 @@ async def notify_job(context: CallbackContext) -> None:
 
             users_to_perform_notifications = users_to_perform_notifications_selected.scalars().all()
             for user in users_to_perform_notifications:
+                logger.info(f"Performing notification {planned_notification.id=} and performing notification to user {user.id=}")
                 reply_markup = (
                     await get_awaliable_inline_keyboard_for_user(reply_message, user, session)
                 ) or (
