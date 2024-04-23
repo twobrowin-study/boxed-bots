@@ -5,7 +5,7 @@
     {% for field_branch in field_branches %}
       <a href="{{ uri_prefix }}/users/branch/{{ field_branch.id }}"
         class="btn mr-1 
-        {% if field_branch.id == field_branch_id %}
+        {% if field_branch.id == curr_field_branch.id %}
           btn-secondary
         {% elif field_branch.status.value == 'normal' %}
           btn-primary
@@ -28,7 +28,13 @@
         <th>{{ i18n.chat_id }}</th>
         <th>{{ i18n.username }}</th>
         {% for field in fields %}
-          <th id='field-{{ field.id }}'>{{ field.key }}</th>
+          <th id='fields-{{ field.id }}'>
+            {{ field.key }}
+            {% if curr_field_branch.is_ui_editable %}
+              &nbsp;
+              <button  class="col-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button>
+            {% endif %}
+          </th>
         {% endfor %}
       </tr>
     </thead>
@@ -38,11 +44,20 @@
           <td id="users-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
           <td id="users-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
           {% for field in fields %}
-            <td id='users-{{ user.id }}-field-{{ field.id }}'>
-              {% if field.id in user.fields %}
+            <td id='users-{{ user.id }}-fields-{{ field.id }}'
+              {% if curr_field_branch.is_ui_editable %}
+                class='col-editable fields-{{ field.id }}'
+              {% endif %}
+            >
+              {% if field.is_boolean %}
+                  <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
+                    <option value="false" {% if field.id not in user.fields or  user.fields[field.id].value == 'false' %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                    <option value="true"  {% if field.id     in user.fields and user.fields[field.id].value == 'true'  %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+                  </select>
+              {% elif field.id in user.fields %}
                 {% if field.image_bucket %}
                   <img
-                    id='users-{{ user.id }}-field-{{ field.id }}-image'
+                    id='users-{{ user.id }}-fields-{{ field.id }}-image'
                     class="img-thumbnail"
                     alt="{{ user.fields[field.id].value }}"
                     style="max-height: 200px; max-width: 200px;"
@@ -95,7 +110,7 @@
             {% for field in fields %}
                 {% if field.id in user.fields and user.fields[field.id].image_bucket %}
                   $(() => {
-                    const doc_id = '#users-{{ user.id }}-field-{{ field.id }}-image'
+                    const doc_id = '#users-{{ user.id }}-fields-{{ field.id }}-image'
                     console.log(`Start loading image ${doc_id}`);
                     $.ajax({
                       url:  `{{ uri_prefix }}/minio/base64/{{ user.fields[field.id].image_bucket }}/{{ user.fields[field.id].value }}`,

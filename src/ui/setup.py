@@ -31,8 +31,16 @@ tags_metadata = [
         "description": "Ветки полей",
     },
     {
+        "name": "replyable_condition_messages",
+        "description": "Сообщения с условиями и ответами",
+    },
+    {
         "name": "keybaord_keys",
         "description": "Клавиши клавиатуры",
+    },
+    {
+        "name": "notifications",
+        "description": "Уведомления",
     },
     {
         "name": "groups",

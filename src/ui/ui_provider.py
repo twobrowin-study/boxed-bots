@@ -127,8 +127,8 @@ class UIProvider(BBProvider):
                 insert(FieldBranch).values(
                     key    = settings.first_field_branch,
                     status = FieldBranchStatusEnum.NORMAL,
-                    is_ui_edditable  = False,
-                    is_bot_edditable = True,
+                    is_ui_editable  = False,
+                    is_bot_editable = True,
                     is_deferrable    = False,
                 )
             )

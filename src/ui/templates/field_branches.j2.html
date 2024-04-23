@@ -6,8 +6,8 @@
       <tr>
         <th id="field_branches-key"             >{{ i18n.key }}</th>
         <th id="field_branches-status"          >{{ i18n.status }}</th>
-        <th id="field_branches-is_ui_edditable" >{{ i18n.is_ui_edditable }}</th>
-        <th id="field_branches-is_bot_edditable">{{ i18n.is_bot_edditable }}</th>
+        <th id="field_branches-is_ui_editable" >{{ i18n.is_ui_editable }}</th>
+        <th id="field_branches-is_bot_editable">{{ i18n.is_bot_editable }}</th>
         <th id="field_branches-is_deferrable"   >{{ i18n.is_deferrable }}</th>
         <th id="field_branches-next_branch_id"   >{{ i18n.next_branch_id }}</th>
         <th id="field_branches-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
@@ -29,16 +29,16 @@
               {% endfor %}
             </select>
           </td>
-          <td id="field_branches-{{ field_branch.id }}-is_ui_edditable" class="row-editable">
-            <select id="field_branches-{{ field_branch.id }}-is_ui_edditable-bool_value" class="form-select" disabled>
-                <option value="false" {% if not field_branch.is_ui_edditable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
-                <option value="true"  {% if     field_branch.is_ui_edditable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+          <td id="field_branches-{{ field_branch.id }}-is_ui_editable" class="row-editable">
+            <select id="field_branches-{{ field_branch.id }}-is_ui_editable-bool_value" class="form-select" disabled>
+                <option value="false" {% if not field_branch.is_ui_editable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     field_branch.is_ui_editable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
             </select>
           </td>
-          <td id="field_branches-{{ field_branch.id }}-is_bot_edditable" class="row-editable">
-            <select id="field_branches-{{ field_branch.id }}-is_bot_edditable-bool_value" class="form-select" disabled>
-                <option value="false" {% if not field_branch.is_bot_edditable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
-                <option value="true"  {% if     field_branch.is_bot_edditable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+          <td id="field_branches-{{ field_branch.id }}-is_bot_editable" class="row-editable">
+            <select id="field_branches-{{ field_branch.id }}-is_bot_editable-bool_value" class="form-select" disabled>
+                <option value="false" {% if not field_branch.is_bot_editable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     field_branch.is_bot_editable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
             </select>
           </td>
           <td id="field_branches-{{ field_branch.id }}-is_deferrable" class="row-editable">
@@ -49,7 +49,7 @@
           </td>
           <td id="field_branches-{{ field_branch.id }}-next_branch_id" class="row-editable">
             <select id="field_branches-{{ field_branch.id }}-next_branch_id-id_value" class="form-select" disabled>
-                <option value="None" {% if not field_branch.next_branch_id %}selected='true'{% endif %}>{{ i18n.branch_none }}</option>
+                <option value="None" {% if not field_branch.next_branch_id %}selected='true'{% endif %}>{{ i18n.none }}</option>
                 {% for next_field_branch in field_branches %}
                   {% if field_branch.id != next_field_branch.id %}
                     <option value="{{ next_field_branch.id }}"
@@ -73,33 +73,33 @@
             {% endfor %}
           </select>
         </td>
-        <td id="field_branches-new-is_ui_edditable" class="row-editable">
-          <select id="field_branches-new-is_ui_edditable-bool_value" class="form-select">
+        <td id="field_branches-new-is_ui_editable" class="row-editable table-info">
+          <select id="field_branches-new-is_ui_editable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-is_bot_edditable" class="row-editable">
-          <select id="field_branches-new-is_bot_edditable-bool_value" class="form-select">
+        <td id="field_branches-new-is_bot_editable" class="row-editable table-info">
+          <select id="field_branches-new-is_bot_editable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-is_deferrable" class="row-editable">
+        <td id="field_branches-new-is_deferrable" class="row-editable table-info">
           <select id="field_branches-new-is_deferrable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-next_branch_id" class="row-editable">
+        <td id="field_branches-new-next_branch_id" class="row-editable table-info">
           <select id="field_branches-new-next_branch_id-id_value" class="form-select">
-              <option value="None">{{ i18n.branch_none }}</option>
+              <option value="None">{{ i18n.none }}</option>
               {% for next_field_branch in field_branches %}
                   <option value="{{ next_field_branch.id }}">{{ next_field_branch.key }}</option>
               {% endfor %}
           </select>
         </td>
-        <td id="field_branches-new-edit"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+        <td id="field_branches-new-edit" class="table-info"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>
   </table>

@@ -1,9 +1,10 @@
 from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
+from telegram.helpers import escape_markdown
 
 from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy import select, insert, update as sql_udate, func
+from sqlalchemy import select, insert, update as sql_update, func
 
 from io import BytesIO
 from datetime import datetime
@@ -14,12 +15,14 @@ from utils.db_model import (
     User, Field,
     UserFieldValue,
     Settings,
-    KeyboardKey
+    KeyboardKey,
+    ReplyableConditionMessage
 )
 from utils.custom_types import (
     UserStatusEnum,
     KeyboardKeyStatusEnum,
-    UserFieldDataPrepared
+    UserFieldDataPrepared,
+    ReplyTypeEnum
 )
 
 from bot.handlers.group import group_send_to_all_admin_tasked
@@ -27,15 +30,46 @@ from bot.handlers.group import group_send_to_all_admin_tasked
 from bot.helpers.keyboards import (
     construct_keyboard_reply,
     get_keyboard_of_user,
-    get_keyboard_key_by_key_text
+    get_keyboard_key_by_key_text,
+    get_awaliable_inline_keyboard_for_user
 )
 from bot.helpers.fields import (
-    get_first_field_question,
-    get_next_field_question_in_branch,
-    get_user_field_value_by_key
+    get_field_question_by_branch,
+    get_next_field_question,
+    get_user_field_value_by_key,
 )
 
 from bot.callback_constants import UserChangeFieldCallback
+
+async def insert_or_update_user_field_value(
+        session: AsyncSession,
+        user_id: int, field_id: int,
+        value: str, message_id: int
+    ) -> None:
+    updated = await session.execute(
+        sql_update(UserFieldValue)
+        .where(
+            (UserFieldValue.user_id  == user_id) &
+            (UserFieldValue.field_id == field_id)
+        )
+        .values(
+            user_id    = user_id,
+            field_id   = field_id,
+            value      = value,
+            message_id = message_id
+        )
+    )
+
+    if updated.rowcount == 0:
+        await session.execute(
+            insert(UserFieldValue)
+            .values(
+                user_id    = user_id,
+                field_id   = field_id,
+                value      = value,
+                message_id = message_id
+            )
+        )
 
 async def user_set_have_banned_bot(app: BBApplication, chat_id: int, have_banned_bot: bool) -> None:
     """
@@ -43,7 +77,7 @@ async def user_set_have_banned_bot(app: BBApplication, chat_id: int, have_banned
     """
     async with app.provider.db_session() as session:
         await session.execute(
-            sql_udate(User).
+            sql_update(User).
             where(User.chat_id == chat_id).
             values(have_banned_bot = have_banned_bot)
         )
@@ -62,16 +96,17 @@ async def create_new_user_and_answer(update: Update, context: ContextTypes.DEFAU
     """
     Создаёт нового пользователя и оповещает его
     """
+    app: BBApplication = context.application
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
     logger.info(f"Got start/help command from new user {chat_id=} and {username=}")
-    first_question = await get_first_field_question(session, settings)
+    first_question = await get_field_question_by_branch(session, settings.first_field_branch)
     await update.message.reply_markdown(
         settings.start_template.format(
             template = first_question.question_markdown,
         ),
-        reply_markup = construct_keyboard_reply(first_question.answer_options)
+        reply_markup = construct_keyboard_reply(first_question, app)
     )
     await session.execute(
         insert(User).values(
@@ -101,7 +136,7 @@ async def parse_start_help_commands_and_answer(update: Update, context: ContextT
                 settings.help_user_template.format(
                     template = curr_field.question_markdown
                 ),
-                reply_markup = construct_keyboard_reply(curr_field.answer_options)
+                reply_markup = construct_keyboard_reply(curr_field, app)
             )
             return
 
@@ -111,7 +146,7 @@ async def parse_start_help_commands_and_answer(update: Update, context: ContextT
                 settings.restart_user_template.format(
                     template = curr_field.question_markdown
                 ),
-                reply_markup = construct_keyboard_reply(curr_field.answer_options)
+                reply_markup = construct_keyboard_reply(curr_field, app)
             )
             return
 
@@ -180,19 +215,69 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
         return None
     
     if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket):
-        await update.message.reply_markdown(curr_field.question_markdown)
+        await update.message.reply_markdown(
+            curr_field.question_markdown,
+            reply_markup = construct_keyboard_reply(curr_field, app)
+        )
         return None
     
     if message_type == 'photo/document' and not (curr_field.document_bucket or curr_field.image_bucket):
-        await update.message.reply_markdown(curr_field.question_markdown)
+        await update.message.reply_markdown(
+            curr_field.question_markdown,
+            reply_markup = construct_keyboard_reply(curr_field, app)
+        )
         return None
 
-    # TODO: Научится получать вопрос из следующей ветки
-    # TODO: Научится учитывать неотображаемые вопросы для того
-    #       чтобы можно было до их заполнения проставить активность пользователя
-    next_field = await get_next_field_question_in_branch(session, curr_field)
+    if update.message.text == app.provider.config.i18n.defer:
+        await update.message.reply_markdown(
+            app.provider.config.i18n.defered,
+            reply_markup = await get_keyboard_of_user(session, user, always_add_defered_keys=True)
+        )
+        await session.execute(
+            sql_update(User)
+            .where(User.id == user.id)
+            .values(
+                deferred_field_id = curr_field.id,
+                curr_field_id = None
+            )
+        )
+        await session.commit()
+        return
+    
+    curr_reply_message: ReplyableConditionMessage = user.curr_reply_message
+    next_field = await get_next_field_question(session, curr_field)
 
-    if next_field:
+    if curr_reply_message and curr_reply_message.reply_type == ReplyTypeEnum.FULL_TEXT_ANSWER:
+        logger.info((
+            f"Got {message_type} answer from user {chat_id=} and {username=} "
+            f"to question {curr_field.key=} with {curr_field.status=}, "
+            f"for full text answer {curr_reply_message.id=}"
+        ))
+        await update.message.reply_markdown(
+            curr_reply_message.reply_status_replies,
+            reply_markup = await get_keyboard_of_user(session, user)
+        )
+        user_update = {
+            'curr_field_id': None,
+            'curr_reply_message_id': None
+        }
+    
+    elif not next_field and curr_reply_message and curr_reply_message.reply_type == ReplyTypeEnum.BRANCH_START:
+        logger.info((
+            f"Got {message_type} answer from user {chat_id=} and {username=} "
+            f"to question {curr_field.key=} with {curr_field.status=}, "
+            f"for last question of branch id {curr_reply_message.id=}"
+        ))
+        await update.message.reply_markdown(
+            curr_reply_message.reply_status_replies,
+            reply_markup = await get_keyboard_of_user(session, user)
+        )
+        user_update = {
+            'curr_field_id': None,
+            'curr_reply_message_id': None
+        }
+    
+    elif next_field:
         logger.info((
             f"Got {message_type} answer from user {chat_id=} and {username=} "
             f"to question {curr_field.key=} with {curr_field.status=}, "
@@ -200,9 +285,8 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
         ))
         await update.message.reply_markdown(
             next_field.question_markdown,
-            reply_markup = construct_keyboard_reply(next_field.answer_options)
+            reply_markup = construct_keyboard_reply(next_field, app)
         )
-        
         user_update = {'curr_field_id': next_field.id}
     
     elif not next_field:
@@ -237,9 +321,9 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
                 )
         except Exception:
             logger.warning(f"Was not able to perform admin notification about number of active users {settings.report_send_every_x_active_users=}")
-        
+
     await session.execute(
-        sql_udate(User)
+        sql_update(User)
         .where(User.id == user.id)
         .values(**user_update)
     )
@@ -281,39 +365,21 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         reply_markup = await get_keyboard_of_user(session, user)
     )
 
-    user_field_value_selected = await session.execute(
-        select(UserFieldValue)
-        .where(
-            (UserFieldValue.field_id == curr_field.id) &
-            (UserFieldValue.user_id  == user.id)
-        )
-    )
-    user_field_value = user_field_value_selected.scalar_one_or_none()
+    try:
+        user_field_value_data = update.message.text_markdown_urled
+    except Exception:
+        user_field_value_data = escape_markdown(update.message.text)
 
-    user_field_value_data = update.message.text_markdown_urled
     if message_type == 'photo/document':
         user_field_value_data = await upload_telegram_file_to_minio_and_return_filename(update, context, user, curr_field, settings, session)
 
-    if user_field_value:
-        await session.execute(
-            sql_udate(UserFieldValue)
-            .where(UserFieldValue.id == user_field_value.id)
-            .values(
-                value = user_field_value_data,
-                message_id = update.message.id
-            )
-        )
-    
-    else:
-        await session.execute(
-            insert(UserFieldValue)
-            .values(
-                user_id    = user.id,
-                field_id   = curr_field.id,
-                value      = user_field_value_data,
-                message_id = update.message.id
-            )
-        )
+    await insert_or_update_user_field_value(
+        session    = session, 
+        user_id    = user.id,
+        field_id   = curr_field.id,
+        value      = user_field_value_data,
+        message_id = update.message.id
+    )
 
     fields_selected = await session.execute(
         select(Field)
@@ -369,7 +435,7 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         logger.warning(f"Was not able to modify message after updating user {chat_id=} {username=} {user.curr_field_id=}")
     
     await session.execute(
-        sql_udate(User)
+        sql_update(User)
         .where(User.id == user.id)
         .values(
             curr_field_id = None,
@@ -384,6 +450,7 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
     """
     Отвечает на пользовательский запрос на кнопку клавиатуры
     """
+    app: BBApplication = context.application
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
@@ -398,27 +465,53 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
         await post_user_me_information(update, context, user, keyboard_key, session)
         return True
 
-    if keyboard_key.photo_link in [None, '']:
+    if keyboard_key.status == KeyboardKeyStatusEnum.DEFERRED:
+        deferred_field: Field = user.deferred_field
         await update.message.reply_markdown(
-            keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user)
+            deferred_field.question_markdown,
+            reply_markup = construct_keyboard_reply(deferred_field, app)
+        )
+        async with app.provider.db_session() as session:
+            await session.execute(
+                sql_update(User)
+                .where(User.id == user.id)
+                .values(
+                    deferred_field_id = None,
+                    curr_field_id     = deferred_field.id
+                )
+            )
+            await session.commit()
+        return True
+
+    reply_condition_message: ReplyableConditionMessage = keyboard_key.reply_condition_message
+
+    reply_markup = (
+        await get_awaliable_inline_keyboard_for_user(reply_condition_message, user, session)
+    ) or (
+        await get_keyboard_of_user(session, user)
+    )
+
+    if reply_condition_message.photo_link in [None, '']:
+        await update.message.reply_markdown(
+            reply_condition_message.text_markdown,
+            reply_markup = reply_markup
         )
         return True
 
-    if keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) <= 1024:
+    if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) <= 1024:
         await update.message.reply_photo(
-            keyboard_key.photo_link,
-            caption = keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user),
+            reply_condition_message.photo_link,
+            caption = reply_condition_message.text_markdown,
+            reply_markup = reply_markup,
             parse_mode = ParseMode.MARKDOWN
         )
         return True
 
-    if keyboard_key.photo_link not in [None, ''] and len(keyboard_key.text_markdown) > 1024:
-        await update.message.reply_photo(keyboard_key.photo_link)
+    if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) > 1024:
+        await update.message.reply_photo(reply_condition_message.photo_link)
         await update.message.reply_markdown(
-            keyboard_key.text_markdown,
-            reply_markup = await get_keyboard_of_user(session, user)
+            reply_condition_message.text_markdown,
+            reply_markup = reply_markup
         )
         return True
 

@@ -1,0 +1,149 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="replyable_condition_messages-table" class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th id="replyable_condition_messages-name"                         >{{ i18n.reply_condition_message_name }}</th>
+        <th id="replyable_condition_messages-text_markdown"                >{{ i18n.text_markdown }}</th>
+        <th id="replyable_condition_messages-photo_link"                   >{{ i18n.photo_link }}</th>
+        <th id="replyable_condition_messages-condition_bool_field_id"      >{{ i18n.condition_bool_field_id }}</th>
+        <th id="replyable_condition_messages-reply_condition_bool_field_id">{{ i18n.reply_condition_bool_field_id }}</th>
+        <th id="replyable_condition_messages-reply_type"                   >{{ i18n.reply_type }}</th>
+        <th id="replyable_condition_messages-reply_answer_field_id"        >{{ i18n.reply_answer_field_id }}</th>
+        <th id="replyable_condition_messages-reply_answer_field_branch_id" >{{ i18n.reply_answer_field_branch_id }}</th>
+        <th id="replyable_condition_messages-reply_keyboard_keys"          >{{ i18n.reply_keyboard_keys }}</th>
+        <th id="replyable_condition_messages-reply_status_replies"         >{{ i18n.reply_status_replies }}</th>
+        <th id="replyable_condition_messages-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for replyable_condition_message in replyable_condition_messages %}
+        <tr id="replyable_condition_messages-{{ replyable_condition_message.id }}">
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-name"          class="row-editable">{{ replyable_condition_message.name }}</td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-text_markdown" class="row-editable" style="white-space: pre-line">{% if replyable_condition_message.text_markdown %}{{ replyable_condition_message.text_markdown }}{% endif %}</td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-photo_link"    class="row-editable">{% if replyable_condition_message.photo_link %}<a target="_blank" href="{{ replyable_condition_message.photo_link }}">{{ replyable_condition_message.photo_link }}</a>{% endif %}</td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-condition_bool_field_id" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-condition_bool_field_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.condition_bool_field_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for field in fields %}
+                  {% if field.is_boolean %}
+                    <option value="{{ field.id }}"
+                      {% if field.id == replyable_condition_message.condition_bool_field_id %}selected='true'{% endif %}
+                    >
+                      {{ field.key }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+            </select>
+          </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_condition_bool_field_id" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_condition_bool_field_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.reply_condition_bool_field_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for field in fields %}
+                  {% if field.is_boolean %}
+                    <option value="{{ field.id }}"
+                      {% if field.id == replyable_condition_message.reply_condition_bool_field_id %}selected='true'{% endif %}
+                    >
+                      {{ field.key }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+            </select>
+          </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_type" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_type-value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.reply_type  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+              {% for reply_type in reply_type_enum %}
+                <option
+                  value="{{ reply_type.value }}"
+                  {% if reply_type == replyable_condition_message.reply_type %}selected='true'{% endif %}
+                >
+                  {{ i18n['reply_type_' + reply_type.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_answer_field_id" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_answer_field_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.reply_answer_field_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for field in fields %}
+                  <option value="{{ field.id }}"
+                    {% if field.id == replyable_condition_message.reply_answer_field_id %}selected='true'{% endif %}
+                  >
+                    {{ field.key }}
+                  </option>
+                {% endfor %}
+            </select>
+          </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_answer_field_branch_id" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_answer_field_branch_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.reply_answer_field_branch_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for field_branch in field_branches %}
+                  <option value="{{ field_branch.id }}"
+                    {% if field_branch.id == replyable_condition_message.reply_answer_field_branch_id %}selected='true'{% endif %}
+                  >
+                    {{ field_branch.key }}
+                  </option>
+                {% endfor %}
+            </select>
+          </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_keyboard_keys" class="row-editable" style="white-space: pre-line">{% if replyable_condition_message.reply_keyboard_keys %}{{ replyable_condition_message.reply_keyboard_keys }}{% endif %}</td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_status_replies" class="row-editable" style="white-space: pre-line">{% if replyable_condition_message.reply_status_replies %}{{ replyable_condition_message.reply_status_replies }}{% endif %}</td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="replyable_condition_messages-new" class="elem-new d-none">
+        <td id="replyable_condition_messages-new-name"          class="row-editable table-info" contenteditable="true"></td>
+        <td id="replyable_condition_messages-new-text_markdown" class="row-editable table-info" contenteditable="true"></td>
+        <td id="replyable_condition_messages-new-photo_link"    class="row-editable table-info" contenteditable="true"></td>
+        <td id="replyable_condition_messages-new-condition_bool_field_id" class="row-editable table-info">
+          <select id="replyable_condition_messages-new-condition_bool_field_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for field in fields %}
+                {% if field.is_boolean %}
+                  <option value="{{ field.id }}">{{ field.key }}</option>
+                {% endif %}
+              {% endfor %}
+          </select>
+        </td>
+        <td id="replyable_condition_messages-new-reply_condition_bool_field_id" class="row-editable table-info">
+          <select id="replyable_condition_messages-new-reply_condition_bool_field_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for field in fields %}
+                {% if field.is_boolean %}
+                  <option value="{{ field.id }}">{{ field.key }}</option>
+                {% endif %}
+              {% endfor %}
+          </select>
+        </td>
+        <td id="replyable_condition_messages-new-reply_type" class="row-editable table-info">
+          <select id="replyable_condition_messages-new-reply_type-value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+            {% for reply_type in reply_type_enum %}
+              <option value="{{ reply_type.value }}">{{ i18n['reply_type_' + reply_type.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="replyable_condition_messages-new-reply_answer_field_id" class="row-editable table-info">
+          <select id="replyable_condition_messages-new-reply_answer_field_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for field in fields %}
+                <option value="{{ field.id }}">{{ field.key }}</option>
+              {% endfor %}
+          </select>
+        </td>
+        <td id="replyable_condition_messages-new-reply_answer_field_branch_id" class="row-editable table-info">
+          <select id="replyable_condition_messages-new-reply_answer_field_branch_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for field_branch in field_branches %}
+                <option value="{{ field_branch.id }}">{{ field_branch.key }}</option>
+              {% endfor %}
+          </select>
+        </td>
+        <td id="replyable_condition_messages-new-reply_keyboard_keys"  class="row-editable table-info" contenteditable="true"></td>
+        <td id="replyable_condition_messages-new-reply_status_replies" class="row-editable table-info" contenteditable="true"></td>
+        <td id="replyable_condition_messages-new-edit" class="table-info"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+    </tbody>
+  </table>
+{% endblock %}

@@ -87,8 +87,9 @@ class I18n(BaseModel, extra="forbid"):
     """
     Перевод приложения
     """
-    yes: str
-    no:  str
+    yes:  str
+    no:   str
+    none: str
 
     there_was_en_error: str
 
@@ -157,6 +158,8 @@ class I18n(BaseModel, extra="forbid"):
 
     keyboard_keys: str
 
+    reply_condition_message_id: str
+
     text_markdown: str
     photo_link:    str
 
@@ -168,12 +171,10 @@ class I18n(BaseModel, extra="forbid"):
     field_branches: str
     fields:         str
 
-    branch_none:    str
-
-    is_ui_edditable:  str
-    is_bot_edditable: str
-    is_deferrable:    str
-    next_branch_id:    str
+    is_ui_editable:  str
+    is_bot_editable: str
+    is_deferrable:   str
+    next_branch_id:  str
 
     field_branch_inactive: str
     field_branch_normal:   str
@@ -184,6 +185,7 @@ class I18n(BaseModel, extra="forbid"):
     answer_options:    str
     image_bucket:      str
     document_bucket:   str
+    is_boolean:        str
 
     field_inactive: str
     field_normal:   str
@@ -192,6 +194,34 @@ class I18n(BaseModel, extra="forbid"):
     document: str
 
     download_users_report: str
+
+    replyable_condition_messages: str
+    reply_condition_message_name: str
+
+    condition_bool_field_id: str
+
+    reply_condition_bool_field_id: str
+
+    reply_type: str
+    reply_type_branch_start:     str
+    reply_type_full_text_answer: str
+    reply_type_fast_answer:      str
+
+    reply_answer_field_id:        str
+    reply_answer_field_branch_id: str
+    reply_keyboard_keys:          str
+    reply_status_replies:         str
+
+    notifications: str
+    notify_date:   str
+
+    notification_inactive:   str
+    notification_to_deliver: str
+    notification_planned:    str
+    notification_delivered:  str
+
+    defer:   str
+    defered: str
 
 class ConfigYaml(BaseSettings):
     """

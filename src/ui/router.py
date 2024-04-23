@@ -8,7 +8,7 @@ from fastapi.responses import (
     StreamingResponse
 )
 from fastapi.staticfiles import StaticFiles
-from starlette.status import HTTP_302_FOUND
+from starlette.status import HTTP_302_FOUND, HTTP_404_NOT_FOUND
 
 import io
 import base64
@@ -16,7 +16,7 @@ import pandas as pd
 from datetime import datetime
 from xlsxwriter.worksheet import Worksheet
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, insert
 from sqlalchemy.exc import IntegrityError
 
 from loguru import logger
@@ -25,8 +25,11 @@ from utils.db_model import (
     BotStatus,
     User,
     Field,
+    UserFieldValue,
     FieldBranch,
     KeyboardKey,
+    ReplyableConditionMessage,
+    Notification,
     Group,
     Settings,
     Log
@@ -36,7 +39,9 @@ from utils.custom_types import (
     FieldStatusEnum,
     FieldBranchStatusEnum,
     KeyboardKeyStatusEnum,
+    NotificationStatusEnum,
     GroupStatusEnum,
+    ReplyTypeEnum
 )
 
 from ui.setup import app, prefix_router, provider
@@ -135,6 +140,9 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
     Показывает пользователей
     """
     async with provider.db_session() as session:
+        curr_field_branch_selected = await session.execute(
+            select(FieldBranch).where(FieldBranch.id == branch_id)
+        )
         field_branches_selected = await session.execute(
             select(FieldBranch).order_by(FieldBranch.id.asc())
         )
@@ -147,20 +155,89 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
             .order_by(User.id.asc())
         )
 
-        field_branches = list(field_branches_selected.scalars().all())
-        fields          = list(fields_selected.scalars().all())
+        curr_field_branch = curr_field_branch_selected.scalar_one_or_none()
+        if not curr_field_branch:
+            return HTTP_404_NOT_FOUND
+        
+        field_branches    = list(field_branches_selected.scalars().all())
+        fields            = list(fields_selected.scalars().all())
         users = [ user.prepare() for user in users_selected.scalars() ]
 
         return template(
             request=request, template_name="users.j2.html",
             additional_context = {
-                'title':           provider.config.i18n.users,
-                'field_branch_id': branch_id,
-                'field_branches':  field_branches,
-                'fields':          fields,
-                'users':           users
+                'title':             provider.config.i18n.users,
+                'curr_field_branch': curr_field_branch,
+                'field_branches':    field_branches,
+                'fields':            fields,
+                'users':             users
             }
         )
+
+@prefix_router.post("/users/branch/{branch_id}", tags=["users"])
+async def users(branch_id: int, request: Request) -> HTMLResponse:
+    """
+    Устанавливает значения полей для пользователей
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'users')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got fields update request on branch {branch_id=} with {request_data=}")
+
+    async with provider.db_session() as session:
+        for user_id, fields_dict in request_data.items():
+            if not user_id.isnumeric():
+                message = f"User id {user_id=} is not numeric"
+                logger.warning(message)
+                return JSONResponse({'error': True, 'message': message}, status_code=500)
+            user_id = int(user_id)
+
+            fields_request: dict[str, dict[str, str]] = fields_dict['fields']
+            if not isinstance(fields_request, dict):
+                message = f"Fields request {fields_request=} is not dict"
+                logger.warning(message)
+                return JSONResponse({'error': True, 'message': message}, status_code=500)
+
+            for field_id, field_value in fields_request.items():
+                if not field_id.isnumeric():
+                    message = f"Field id {field_id=} is not numeric"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+                field_id = int(field_id)
+
+                if not isinstance(field_value, dict):
+                    message = f"Field value {field_value=} is not dict"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+
+                if 'value' not in field_value:
+                    message = f"Value not in field value {field_value=}"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+                value = field_value['value']
+
+                updated = await session.execute(
+                    update(UserFieldValue)
+                    .where(
+                        (UserFieldValue.user_id  == user_id) &
+                        (UserFieldValue.field_id == field_id)
+                    )
+                    .values(value = value)
+                )
+
+                if updated.rowcount == 0:
+                    await session.execute(
+                        insert(UserFieldValue)
+                        .values(
+                            user_id  = user_id,
+                            field_id = field_id,
+                            value    = value
+                        )
+                    )
+        
+        await session.commit()
+        return JSONResponse({'error': False}, status_code=200)
 
 @prefix_router.get("/users/report/xslx", tags=["users"], dependencies=[Depends(verify_token)])
 async def users(request: Request) -> Response:
@@ -174,7 +251,10 @@ async def users(request: Request) -> Response:
             select(User)
             .order_by(User.id.asc())
         )
-        users_df = pd.DataFrame([ user.to_plain_dict() for user in users_selected.scalars() ])
+        users_df = pd.DataFrame([
+            user.to_plain_dict(i18n=provider.config.i18n)
+            for user in users_selected.scalars()
+        ])
 
         logger.debug(f"Users df:\n{users_df}")
         
@@ -341,6 +421,79 @@ async def field_branches(request: Request) -> JSONResponse:
 
 
 ####################################################################################################
+# Replyable condition messages
+####################################################################################################
+
+@prefix_router.get("/replyable_condition_messages", tags=["replyable_condition_messages"])
+async def replyable_condition_messages(request: Request) -> HTMLResponse:
+    """
+    Показывает сообщения с условиями и ответами
+    """
+    async with provider.db_session() as session:
+        replyable_condition_messages_selected = await session.execute(
+            select(ReplyableConditionMessage).order_by(ReplyableConditionMessage.id.asc())
+        )
+        fields_selected = await session.execute(
+            select(Field).order_by(Field.id.asc())
+        )
+        field_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
+        )
+
+    replyable_condition_messages = list(replyable_condition_messages_selected.scalars().all())
+    fields                       = list(fields_selected.scalars().all())
+    field_branches               = list(field_branches_selected.scalars().all())
+
+    return template(
+        request=request, template_name="replyable_condition_messages.j2.html",
+        additional_context = {
+            'title': provider.config.i18n.replyable_condition_messages,
+            'replyable_condition_messages': replyable_condition_messages,
+            'reply_type_enum':              ReplyTypeEnum,
+            'fields':                       fields,
+            'field_branches':               field_branches
+        }
+    )
+
+@prefix_router.post("/replyable_condition_messages", tags=["replyable_condition_messages"], dependencies=[Depends(verify_token)])
+async def replyable_condition_messages(request: Request) -> JSONResponse:
+    """
+    Изменяет настройки сообщений с условиями и ответами
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'replyable_condition_messages')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got replyable_condition_messages update request with {request_data=}")
+
+    replyable_condition_messages_attrs, bad_responce = prepare_attrs_object_from_request(request_data, ReplyTypeEnum)
+    if bad_responce:
+        return bad_responce
+    
+    for _,replyable_condition_messages_attr in replyable_condition_messages_attrs.items():
+        if 'reply_type' in replyable_condition_messages_attr:
+            if replyable_condition_messages_attr['reply_type'] == ReplyTypeEnum.BRANCH_START:
+                if 'reply_answer_field_branch_id' not in replyable_condition_messages_attr or not replyable_condition_messages_attr['reply_answer_field_branch_id']:
+                    message = f"Did not found reply_answer_field_branch_id in replyable_condition_message object while status is BRANCH_START"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+                
+            if replyable_condition_messages_attr['reply_type'] in [ReplyTypeEnum.FULL_TEXT_ANSWER, ReplyTypeEnum.FAST_ANSWER]:
+                if 'reply_answer_field_id' not in replyable_condition_messages_attr or not replyable_condition_messages_attr['reply_answer_field_id']:
+                    message = f"Did not found reply_answer_field_id in replyable_condition_message object while status is FULL_TEXT_ANSWER or FAST_ANSWER"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+                
+            if replyable_condition_messages_attr['reply_type'] in [ReplyTypeEnum.FULL_TEXT_ANSWER, ReplyTypeEnum.BRANCH_START]:
+                if 'reply_keyboard_keys' in replyable_condition_messages_attr and '\n' in replyable_condition_messages_attr['reply_keyboard_keys']:
+                    message = f"New lines found in reply_keyboard_keys in replyable_condition_message object while status is FULL_TEXT_ANSWER or BRANCH_START"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+    
+    return await try_to_save_attrs(ReplyableConditionMessage, replyable_condition_messages_attrs)
+
+
+####################################################################################################
 # Keyboard keys
 ####################################################################################################
 
@@ -350,23 +503,28 @@ async def keyboard_keys(request: Request) -> HTMLResponse:
     Показывает кнопки клавиатуры
     """
     async with provider.db_session() as session:
-        field_branches_selected = await session.execute(
-            select(FieldBranch).order_by(FieldBranch.id.asc())
-        )
         keyboard_keys_selected = await session.execute(
             select(KeyboardKey).order_by(KeyboardKey.id.asc())
         )
+        replyable_condition_messages_selected = await session.execute(
+            select(ReplyableConditionMessage).order_by(ReplyableConditionMessage.id.asc())
+        )
+        field_branches_selected = await session.execute(
+            select(FieldBranch).order_by(FieldBranch.id.asc())
+        )
 
-    field_branches = list(field_branches_selected.scalars().all())
-    keyboard_keys = keyboard_keys_selected.scalars().all()
+    keyboard_keys                = list(keyboard_keys_selected.scalars().all())
+    replyable_condition_messages = list(replyable_condition_messages_selected.scalars().all())
+    field_branches               = list(field_branches_selected.scalars().all())
 
     return template(
         request=request, template_name="keyboard_keys.j2.html",
         additional_context = {
-            'title':  provider.config.i18n.keyboard_keys,
-            'keyboard_keys':            keyboard_keys,
-            'keyboard_key_status_enum': KeyboardKeyStatusEnum,
-            'field_branches':           field_branches
+            'title': provider.config.i18n.keyboard_keys,
+            'keyboard_keys':                keyboard_keys,
+            'keyboard_key_status_enum':     KeyboardKeyStatusEnum,
+            'replyable_condition_messages': replyable_condition_messages,
+            'field_branches':               field_branches
         }
     )
 
@@ -387,17 +545,67 @@ async def keyboard_keys(request: Request) -> JSONResponse:
     
     for _,keyboard_keys_attr in keyboard_keys_attrs.items():
         if 'status' in keyboard_keys_attr:
-            if keyboard_keys_attr['status'] in [KeyboardKeyStatusEnum.ME, KeyboardKeyStatusEnum.DEFERRED]:
-                if 'branch_id' not in keyboard_keys_attr or not keyboard_keys_attr['branch_id']:
-                    logger.warning(f"Did not found branch_id in keyboard_key object while status is ME or DEFERRED")
-                    return JSONResponse({'error': True}, status_code=500)
+            if keyboard_keys_attr['status'] == KeyboardKeyStatusEnum.NORMAL:
+                if 'reply_condition_message_id' not in keyboard_keys_attr or not keyboard_keys_attr['reply_condition_message_id']:
+                    message = f"Did not found reply_condition_message_id in keyboard_key object while status is NORMAL"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
                 
-            if keyboard_keys_attr['status'] in [KeyboardKeyStatusEnum.NORMAL, KeyboardKeyStatusEnum.DEFERRED]:
-                if 'text_markdown' not in keyboard_keys_attr or not keyboard_keys_attr['text_markdown']:
-                    logger.warning(f"Did not found text_markdown in keyboard_key object while status is NORMAL or DEFERRED")
-                    return JSONResponse({'error': True}, status_code=500)
+            if keyboard_keys_attr['status'] == KeyboardKeyStatusEnum.ME:
+                if 'branch_id' not in keyboard_keys_attr or not keyboard_keys_attr['branch_id']:
+                    message = f"Did not found branch_id in keyboard_key object while status is ME"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
     
     return await try_to_save_attrs(KeyboardKey, keyboard_keys_attrs)
+
+
+####################################################################################################
+# Notifications
+####################################################################################################
+
+@prefix_router.get("/notifications", tags=["notifications"])
+async def notifications(request: Request) -> HTMLResponse:
+    """
+    Показывает уведомления
+    """
+    async with provider.db_session() as session:
+        notifications_selected = await session.execute(
+            select(Notification).order_by(Notification.id.asc())
+        )
+        replyable_condition_messages_selected = await session.execute(
+            select(ReplyableConditionMessage).order_by(ReplyableConditionMessage.id.asc())
+        )
+
+    notifications                = list(notifications_selected.scalars().all())
+    replyable_condition_messages = list(replyable_condition_messages_selected.scalars().all())
+
+    return template(
+        request=request, template_name="notifications.j2.html",
+        additional_context = {
+            'title': provider.config.i18n.notifications,
+            'notifications':                notifications,
+            'notification_status_enum':     NotificationStatusEnum,
+            'replyable_condition_messages': replyable_condition_messages
+        }
+    )
+
+@prefix_router.post("/notifications", tags=["notifications"], dependencies=[Depends(verify_token)])
+async def notifications(request: Request) -> JSONResponse:
+    """
+    Изменяет настройки уведомлений
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'notifications')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got notifications update request with {request_data=}")
+
+    notifications_attrs, bad_responce = prepare_attrs_object_from_request(request_data, NotificationStatusEnum)
+    if bad_responce:
+        return bad_responce
+    
+    return await try_to_save_attrs(Notification, notifications_attrs)
 
 
 ####################################################################################################

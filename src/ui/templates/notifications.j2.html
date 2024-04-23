@@ -1,0 +1,65 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="notifications-table" class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th id="notifications-notify_date"               >{{ i18n.notify_date }}</th>
+        <th id="notifications-status"                    >{{ i18n.status }}</th>
+        <th id="notifications-reply_condition_message_id">{{ i18n.reply_condition_message_id }}</th>
+        <th id="notifications-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for notification in notifications %}
+        <tr id="notifications-{{ notification.id }}">
+          <td id="notifications-{{ notification.id }}-notify_date-date_value" class="row-editable">{{ notification.notify_date }}</td>
+          <td id="notifications-{{ notification.id }}-status" class="row-editable">
+            <select id="notifications-{{ notification.id }}-status-value" class="form-select" disabled>
+              {% for status in notification_status_enum %}
+                <option
+                  value="{{ status.value }}"
+                  {% if status == notification.status %}selected='true'{% endif %}
+                >
+                  {{ i18n['notification_' + status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="notifications-{{ notification.id }}-reply_condition_message_id" class="row-editable">
+            <select id="notifications-{{ notification.id }}-reply_condition_message_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not notification.reply_condition_message_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for replyable_condition_message in replyable_condition_messages %}
+                  <option value="{{ replyable_condition_message.id }}"
+                    {% if replyable_condition_message.id == notification.reply_condition_message_id %}selected='true'{% endif %}
+                  >
+                    {{ replyable_condition_message.name }}
+                  </option>
+                {% endfor %}
+            </select>
+          </td>
+          <td id="notifications-{{ notification.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="notifications-new" class="elem-new d-none">
+        <td id="notifications-new-notify_date-date_value" class="row-editable table-info" contenteditable="true"></td>
+        <td id="notifications-new-status" class="row-editable table-info">
+          <select id="notifications-new-status-value" class="form-select">
+            {% for status in notification_status_enum %}
+              <option value="{{ status.value }}">{{ i18n['notification_' + status.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="notifications-new-reply_condition_message_id" class="row-editable table-info">
+          <select id="notifications-new-reply_condition_message_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for replyable_condition_message in replyable_condition_messages %}
+                <option value="{{ replyable_condition_message.id }}">{{ replyable_condition_message.name }}</option>
+              {% endfor %}
+          </select>
+        </td>
+        <td id="notifications-new-edit" class="table-info"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

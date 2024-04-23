@@ -157,28 +157,28 @@ notification_admin_groups_template:
   value: |-
     _Данное сообщение только что было разослано всем пользователям:_
 
-    {notification.text_markdown}
+    {text_markdown}
 
 notification_admin_groups_condition_template:
   description: Шаблон оповещения групп админов о разосланных сообщениях по условию
   value: |-
-    _Данное сообщение только что было разослано пользователям согласно столбцу_ *{notification.condition}*:
+    _Данное сообщение только что было разослано пользователям согласно столбцу_ *{condition}*:
 
-    {notification.text_markdown}
+    {text_markdown}
 
 notification_planned_admin_groups_template:
   description: Шаблон оповещения групп админов о разосланных сообщениях
   value: |-
-    _Данное сообщение запланировано для рассылки всем пользователям в_ *{notification.scheldue_date}*:
+    _Данное сообщение запланировано для рассылки всем пользователям в_ *{scheldue_date}*:
 
-    {notification.text_markdown}
+    {text_markdown}
 
 notification_planned_admin_groups_condition_template:
   description: Шаблон оповещения групп админов о разосланных сообщениях по условию
   value: |-
-    _Данное сообщение запланировано для рассылки всем пользователям согласно столбцу_ *{notification.condition}* _в_ *{notification.scheldue_date}*:
+    _Данное сообщение запланировано для рассылки всем пользователям согласно столбцу_ *{condition}* _в_ *{scheldue_date}*:
 
-    {notification.text_markdown}
+    {text_markdown}
 
 report_send_every_x_active_users:
   description: Количество активных пользователей, по которым будет выслано оповещение в группу админов

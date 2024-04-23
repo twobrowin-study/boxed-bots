@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from typing import Annotated
 from fastapi.exceptions import HTTPException
 from starlette.status import HTTP_401_UNAUTHORIZED
+from datetime import datetime
 
 from loguru import logger
 
@@ -99,8 +100,10 @@ def prepare_attrs_object_from_request(
                     obj[key] = True if value['bool_value'] == 'true' else False
                 elif 'id_value' in value:
                     obj[key] = None if value['id_value'] == 'None' else int(value['id_value'])
+                elif 'date_value' in value:
+                    obj[key] = None if value['date_value'] == 'None' else datetime.fromisoformat(value['date_value'])
                 else:
-                    obj[key] = status_type(**value)
+                    obj[key] = None if value['value'] == 'None' else status_type(**value)
             else:
                 logger.warning(f"Got bad key value pair {key=} {value=}")
                 return {}, bad_responce

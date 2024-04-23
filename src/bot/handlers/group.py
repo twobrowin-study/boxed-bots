@@ -1,8 +1,14 @@
-from telegram import Update
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    InlineKeyboardMarkup
+)
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from loguru import logger
 
@@ -34,6 +40,22 @@ async def group_send_to_all_superadmin_tasked(app: BBApplication, message: str, 
         selector=(Group.status == GroupStatusEnum.SUPER_ADMIN),
         message=message, parse_mode=parse_mode,
         update={'update': 'group_send_to_all_superadmins_tasked', 'message': message}
+    )
+
+async def group_send_to_all_superadmin_tasked(
+        app: BBApplication, message: str, parse_mode: ParseMode,
+        reply_markup: ReplyKeyboardMarkup | ReplyKeyboardRemove | InlineKeyboardMarkup | None = None,
+        session: AsyncSession = None, 
+    ) -> None:
+    """
+    Отправить сообщение всем суперадминам в виде параллельной задачи
+    """
+    await send_to_all_coroutines_tasked(
+        app=app, table=Group,
+        selector=(Group.status == GroupStatusEnum.SUPER_ADMIN),
+        message=message, parse_mode=parse_mode,
+        update={'update': 'group_send_to_all_superadmins_tasked', 'message': message},
+        session=session, reply_markup=reply_markup
     )
 
 async def group_send_to_all_admin_tasked(app: BBApplication, message: str, parse_mode: ParseMode) -> None:

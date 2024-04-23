@@ -48,6 +48,15 @@ class FieldStatusEnum(Enum):
     """
     INACTIVE   = 'inactive' # Не актвное поле
     NORMAL     = 'normal'   # Нормальный вопрос
+
+class ReplyTypeEnum(Enum):
+    """
+    Тип ответа на сообщения
+    """
+    BRANCH_START     = 'branch_start'
+    FULL_TEXT_ANSWER = 'full_text_answer'
+    FAST_ANSWER      = 'fast_answer'
+    
     
 class KeyboardKeyStatusEnum(Enum):
     """
@@ -57,6 +66,19 @@ class KeyboardKeyStatusEnum(Enum):
     NORMAL   = 'normal'   # Обычная клавиша
     DEFERRED = 'deferred' # Вернуться к отложенному вопросу - отображается только когда у пользователя заполненно поле отложенного вопроса
     ME       = 'me'       # Посмотреть свою пользовательскую запись (основные и откладываемые вопросы)
+
+class NotificationStatusEnum(Enum):
+    """
+    Статус отправки уведомлений
+    """
+    INACTIVE   = 'inactive'
+    TO_DELIVER = 'to_deliver'
+    PLANNED    = 'planned'
+    DELIVERED  = 'delivered'
+
+class UserFieldDataPlain(NamedTuple):
+    key:   str
+    value: str
 
 class UserFieldDataPrepared(NamedTuple):
     value: str

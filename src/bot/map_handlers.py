@@ -10,6 +10,8 @@ from telegram.ext.filters import (
     TEXT, PHOTO, Document
 )
 
+from loguru import logger
+
 from bot.application import BBApplication
 
 from bot.handlers.default import (
@@ -27,11 +29,19 @@ from bot.handlers.user import (
     user_start_help_handler,
     user_message_text_handler,
     user_message_photo_document_handler,
-    user_change_state_callback
+    user_change_state_callback,
+    branch_start_callback_handler,
+    full_text_callback_handler,
+    fast_answer_callback_handler
 )
 
+from bot.handlers.notification import notify_job
+
 from bot.callback_constants import (
-    UserChangeFieldCallback
+    UserChangeFieldCallback,
+    UserStartBranchReplyCallback,
+    UserFullTextAnswerReplyCallback,
+    UserFastAnswerReplyCallback
 )
 
 def map_service_mode_handlers(app: BBApplication) -> None:
@@ -82,6 +92,12 @@ def map_default_handlers(app: BBApplication) -> None:
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
     app.add_handlers([
-        CallbackQueryHandler(user_change_state_callback, pattern=UserChangeFieldCallback.PATTERN, block=False),
+        CallbackQueryHandler(user_change_state_callback,    pattern=UserChangeFieldCallback.PATTERN,         block=False),
+        CallbackQueryHandler(branch_start_callback_handler, pattern=UserStartBranchReplyCallback.PATTERN,    block=False),
+        CallbackQueryHandler(full_text_callback_handler,    pattern=UserFullTextAnswerReplyCallback.PATTERN, block=False),
+        CallbackQueryHandler(fast_answer_callback_handler,  pattern=UserFastAnswerReplyCallback.PATTERN,     block=False),
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
+    app.job_queue.run_once(notify_job, when=1)
+    app.job_queue.run_repeating(notify_job, interval=10)
+    logger.info("Starting notify job")

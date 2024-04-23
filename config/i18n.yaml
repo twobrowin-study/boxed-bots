@@ -1,5 +1,6 @@
 'yes': Да
 'no':  Нет
+none:  Пусто
 
 there_was_en_error: Произошла ошибка!
 
@@ -70,6 +71,8 @@ group_super_admin: Супер админы
 
 keyboard_keys: Клавиатура
 
+reply_condition_message_id: Сообщение
+
 text_markdown: Тест разметки markdwon
 photo_link:    Ссылка на изображение
 
@@ -81,12 +84,10 @@ keyboard_key_me:       Обо мне
 field_branches: Ветки полей
 fields: Поля пользователей
 
-branch_none: Пусто
-
-is_ui_edditable:  Можно менять в UI
-is_bot_edditable: Можно менять в боте
-is_deferrable:    Можно отложить
-next_branch_id:    Следующая ветка
+is_ui_editable:  Можно менять в UI
+is_bot_editable: Можно менять в боте
+is_deferrable:   Можно отложить
+next_branch_id:  Следующая ветка
 
 field_branch_inactive: Не активна
 field_branch_normal:   Активна
@@ -97,11 +98,40 @@ question_markdown: Вопрос Markdown
 answer_options:    Варианты ответа
 image_bucket:      Бакет изображений
 document_bucket:   Бакет документа
+is_boolean:        Булево
 
 field_inactive: Не активен
 field_normal:   Активен
 
-image: Изображение
+image:    Изображение
 document: Документ
 
 download_users_report: Выгрузка пользователей
+
+replyable_condition_messages: Сообщения с условиями и ответами
+reply_condition_message_name: Обозначение
+
+condition_bool_field_id: Условие показа/отправки
+
+reply_condition_bool_field_id: Условие ответа
+
+reply_type: Тип ответа
+reply_type_branch_start:     Ветка вопросов
+reply_type_full_text_answer: Один вопрос
+reply_type_fast_answer:      Быстрый ответ
+
+reply_answer_field_id:        Вопрос
+reply_answer_field_branch_id: Ветка вопросов
+reply_keyboard_keys:          Клавиши
+reply_status_replies:         Ответы
+
+notifications: Уведомления
+notify_date:   Дата уведомления
+
+notification_inactive:   Не активно
+notification_to_deliver: Отправить
+notification_planned:    Запланировано
+notification_delivered:  Отправлено
+
+defer:   Отложить заполнение на этом вопросе
+defered: Заполнение отложено на этом вопросе

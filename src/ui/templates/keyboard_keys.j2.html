@@ -4,11 +4,10 @@
   <table id="keyboard_keys-table" class="table table-striped align-middle">
     <thead>
       <tr>
-        <th id="keyboard_keys-key"          >{{ i18n.key }}</th>
-        <th id="keyboard_keys-status"       >{{ i18n.status }}</th>
-        <th id="keyboard_keys-text_markdown">{{ i18n.text_markdown }}</th>
-        <th id="keyboard_keys-photo_link"   >{{ i18n.photo_link }}</th>
-        <th id="keyboard_keys-branch_id"    >{{ i18n.branch_id }}</th>
+        <th id="keyboard_keys-key"                       >{{ i18n.key }}</th>
+        <th id="keyboard_keys-status"                    >{{ i18n.status }}</th>
+        <th id="keyboard_keys-reply_condition_message_id">{{ i18n.reply_condition_message_id }}</th>
+        <th id="keyboard_keys-branch_id"                 >{{ i18n.branch_id }}</th>
         <th id="keyboard_keys-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
@@ -28,17 +27,29 @@
               {% endfor %}
             </select>
           </td>
-          <td id="keyboard_keys-{{ keyboard_key.id }}-text_markdown" class="row-editable" style="white-space: pre-line">{% if keyboard_key.text_markdown %}{{ keyboard_key.text_markdown }}{% endif %}</td>
-          <td id="keyboard_keys-{{ keyboard_key.id }}-photo_link"    class="row-editable">{% if keyboard_key.photo_link %}<a target="_blank" href="{{ keyboard_key.photo_link }}">{{ keyboard_key.photo_link }}</a>{% endif %}</td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-reply_condition_message_id" class="row-editable">
+            <select id="keyboard_keys-{{ keyboard_key.id }}-reply_condition_message_id-id_value" class="form-select" disabled>
+              <option value="None" {% if not keyboard_key.reply_condition_message_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+                {% for replyable_condition_message in replyable_condition_messages %}
+                  <option value="{{ replyable_condition_message.id }}"
+                    {% if replyable_condition_message.id == keyboard_key.reply_condition_message_id %}selected='true'{% endif %}
+                  >
+                    {{ replyable_condition_message.name }}
+                  </option>
+                {% endfor %}
+            </select>
+          </td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-branch_id" class="row-editable">
             <select id="keyboard_keys-{{ keyboard_key.id }}-branch_id-id_value" class="form-select" disabled>
-              <option value="None" {% if not  keyboard_key.branch_id  %}selected='true'{% endif %}>{{ i18n.branch_none }}</option>
+              <option value="None" {% if not keyboard_key.branch_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
                 {% for field_branch in field_branches %}
-                  <option value="{{ field_branch.id }}"
-                    {% if field_branch.id == keyboard_key.branch_id %}selected='true'{% endif %}
-                  >
-                    {{ field_branch.key }}
-                  </option>
+                  {% if field_branch.is_bot_editable %}
+                    <option value="{{ field_branch.id }}"
+                      {% if field_branch.id == keyboard_key.branch_id %}selected='true'{% endif %}
+                    >
+                      {{ field_branch.key }}
+                    </option>
+                  {% endif %}
                 {% endfor %}
             </select>
           </td>
@@ -54,17 +65,25 @@
             {% endfor %}
           </select>
         </td>
-        <td id="keyboard_keys-new-text_markdown" class="row-editable table-info" contenteditable="true"></td>
-        <td id="keyboard_keys-new-photo_link"    class="row-editable table-info" contenteditable="true"></td>
-        <td id="keyboard_keys-new-branch_id" class="row-editable">
-          <select id="keyboard_keys-new-branch_id-id_value" class="form-select">
-            <option value="None">{{ i18n.branch_none }}</option>
-              {% for field_branch in field_branches %}
-                <option value="{{ field_branch.id }}">{{ field_branch.key }}</option>
+        <td id="keyboard_keys-new-reply_condition_message_id" class="row-editable table-info">
+          <select id="keyboard_keys-new-reply_condition_message_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for replyable_condition_message in replyable_condition_messages %}
+                <option value="{{ replyable_condition_message.id }}">{{ replyable_condition_message.name }}</option>
               {% endfor %}
           </select>
         </td>
-        <td id="keyboard_keys-new-edit"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+        <td id="keyboard_keys-new-branch_id" class="row-editable table-info">
+          <select id="keyboard_keys-new-branch_id-id_value" class="form-select">
+            <option value="None">{{ i18n.none }}</option>
+              {% for field_branch in field_branches %}
+                {% if field_branch.is_bot_editable %}
+                  <option value="{{ field_branch.id }}">{{ field_branch.key }}</option>
+                {% endif %}
+              {% endfor %}
+          </select>
+        </td>
+        <td id="keyboard_keys-new-edit" class="table-info"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>
   </table>
