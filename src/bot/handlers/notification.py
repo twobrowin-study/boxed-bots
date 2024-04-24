@@ -119,6 +119,10 @@ async def notify_job(context: CallbackContext) -> None:
 
             users_to_perform_notifications = users_to_perform_notifications_selected.scalars().all()
             for user in users_to_perform_notifications:
+                if user.have_banned_bot:
+                    logger.info(f"Could not perform notification {planned_notification.id=} to user {user.id=} because user have banned bot")
+                    continue
+
                 logger.info(f"Performing notification {planned_notification.id=} and performing notification to user {user.id=}")
                 reply_markup = (
                     await get_awaliable_inline_keyboard_for_user(reply_message, user, session)
