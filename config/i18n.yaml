@@ -135,3 +135,5 @@ notification_delivered:  Отправлено
 
 defer:   Отложить заполнение на этом вопросе
 defered: Заполнение отложено на этом вопросе
+
+download_file: Скачать

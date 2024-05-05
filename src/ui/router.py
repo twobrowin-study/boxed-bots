@@ -306,6 +306,17 @@ async def minio(bucket: str, filename: str) -> Response:
         'mime':  content_type
     })
 
+@prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
+async def minio(bucket: str, filename: str) -> Response:
+    """
+    Прокси к minio, который возвращает файл
+    """
+    bio, _ = await provider.minio.download(bucket, filename)
+    if not bio:
+        return JSONResponse({'error': True}, status_code=500)
+    bio.seek(0)
+    return StreamingResponse(bio)
+
 
 ####################################################################################################
 # Fields

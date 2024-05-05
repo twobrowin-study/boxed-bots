@@ -62,6 +62,13 @@
                     alt="{{ user.fields[field.id].value }}"
                     style="max-height: 200px; max-width: 200px;"
                   />
+                {% elif field.document_bucket %}
+                  <a
+                    id='users-{{ user.id }}-fields-{{ field.id }}-document'
+                    class="btn btn-sm btn-primary"
+                  >
+                      {{ i18n.download_file }} {{ user.fields[field.id].value }}
+                  </a>
                 {% else %}
                   <span style="white-space: pre-line">{{ user.fields[field.id].value }}</span>
                 {% endif %}
@@ -157,5 +164,38 @@
       }
       waitForKeycloakToken();
     });
+  </script>
+
+
+  <script>
+    {% for user in users %}
+      {% for field in fields %}
+          {% if field.id in user.fields and user.fields[field.id].document_bucket %}
+            $(() => {
+              $("#users-{{ user.id }}-fields-{{ field.id }}-document").click(() => {
+                $.ajax({
+                  url:  `{{ uri_prefix }}/minio/{{ user.fields[field.id].document_bucket }}/{{ user.fields[field.id].value }}`,
+                  type: 'GET',
+                  tryCount:   0,
+                  retryLimit: 3,
+                  headers: {
+                    Accept:        "*/*",
+                    Authorization: `Bearer ${keycloak.token}`
+                  },
+                  xhrFields: {
+                      'responseType': 'blob'
+                  },
+                  success: (data, status, xhr) => {
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(data);
+                    link.download = '{{ user.fields[field.id].value }}';
+                    link.click();
+                  }
+                });
+              });
+            });
+          {% endif %}
+      {% endfor %}
+    {% endfor %}
   </script>
 {% endblock %}

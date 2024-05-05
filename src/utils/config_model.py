@@ -223,6 +223,8 @@ class I18n(BaseModel, extra="forbid"):
     defer:   str
     defered: str
 
+    download_file: str
+
 class ConfigYaml(BaseSettings):
     """
     Основной класс конфигурации прилоежния
