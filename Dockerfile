@@ -59,7 +59,7 @@ ENV MINIO_RELEASE="2024-04-06T05-26-02Z" \
     MINIO_BINARY=/sbin/minio \
     MINIO_USER=minio
 
-RUN wget https://dl.min.io/server/minio/release/linux-amd64/minio.RELEASE.${MINIO_RELEASE} -O ${MINIO_BINARY} && \
+RUN wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio.RELEASE.${MINIO_RELEASE} -O ${MINIO_BINARY} && \
     chmod +x ${MINIO_BINARY} && \
     useradd -ms /bin/bash ${MINIO_USER} -G ${PG_USER}
 

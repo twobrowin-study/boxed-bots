@@ -114,8 +114,7 @@
           url:  `${window.location.pathname}?action=${button.getAttribute('action')}`,
           type: 'POST',
           headers: {
-            Accept:        "application/json",
-            Authorization: `Bearer ${keycloak.token}`
+            Accept: 'application/json'
           },
           success: () => location.reload(),
           error: () => $('#there-was-en-error').removeClass('d-none')

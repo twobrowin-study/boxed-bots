@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "3.12.2"
+python = "^3.12.2"
 python-telegram-bot = {version = "^21.0.1", extras = ["job-queue"]}
 python-dotenv = "^1.0.1"
 pydantic = "^2.6.4"
@@ -33,6 +33,7 @@ pillow = "^10.3.0"
 pandas = "^2.2.2"
 openpyxl = "^3.1.2"
 XlsxWriter = "^3.2.0"
+uuid = "^1.30"
 
 [build-system]
 requires = ["poetry-core"]

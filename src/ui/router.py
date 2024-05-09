@@ -1,14 +1,13 @@
-from fastapi import Request, Depends
+from fastapi import Request, APIRouter, Depends
 from fastapi.responses import (
     Response,
-    PlainTextResponse,
     HTMLResponse,
     RedirectResponse,
     JSONResponse,
     StreamingResponse
 )
-from fastapi.staticfiles import StaticFiles
 from starlette.status import HTTP_302_FOUND, HTTP_404_NOT_FOUND
+from typing import Annotated
 
 import io
 import base64
@@ -44,17 +43,17 @@ from utils.custom_types import (
     ReplyTypeEnum
 )
 
-from ui.setup import app, prefix_router, provider
+from ui.ui_keycloak import UIUser
+from ui.setup import provider, app
+from ui.login import verify_token
 from ui.helpers import (
-    verify_token,
     template,
     get_request_data_or_responce,
     prepare_attrs_object_from_request,
     try_to_save_attrs
 )
 
-app.mount(f"{provider.config.path_prefix}/assets", StaticFiles(directory=f"{provider.config.box_bot_home}/src/ui/assets"), name="assets")
-
+prefix_router = APIRouter(prefix = provider.config.path_prefix, dependencies = [Depends(verify_token)])
 
 ####################################################################################################
 # Bot status
@@ -68,13 +67,13 @@ async def root() -> RedirectResponse:
     return RedirectResponse(url=f"{provider.config.path_prefix}/status", status_code=HTTP_302_FOUND)
 
 @prefix_router.get("/status", tags=["status"])
-async def status(request: Request) -> HTMLResponse:
+async def status(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает текущий статус работы бота
     """
     bot_status = await provider.bot_status
     return template(
-        request=request, template_name="status.j2.html",
+        request=request, user=user, template_name="status.j2.html",
         additional_context = {
             'title':         provider.config.i18n.bot_status,
             'BotStatusEnum': BotStatusEnum,
@@ -82,7 +81,7 @@ async def status(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/status", tags=["status"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/status", tags=["status"])
 async def status(action: str) -> JSONResponse:
     """
     Устанавливает статус работы бота
@@ -135,7 +134,7 @@ async def users() -> RedirectResponse:
     return RedirectResponse(url=f"{provider.config.path_prefix}/users/branch/{first_field_branch_id}", status_code=HTTP_302_FOUND)
 
 @prefix_router.get("/users/branch/{branch_id}", tags=["users"])
-async def users(branch_id: int, request: Request) -> HTMLResponse:
+async def users(branch_id: int, request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает пользователей
     """
@@ -164,7 +163,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
         users = [ user.prepare() for user in users_selected.scalars() ]
 
         return template(
-            request=request, template_name="users.j2.html",
+            request=request, user=user, template_name="users.j2.html",
             additional_context = {
                 'title':             provider.config.i18n.users,
                 'curr_field_branch': curr_field_branch,
@@ -239,7 +238,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
         await session.commit()
         return JSONResponse({'error': False}, status_code=200)
 
-@prefix_router.get("/users/report/xslx", tags=["users"], dependencies=[Depends(verify_token)])
+@prefix_router.get("/users/report/xslx", tags=["users"])
 async def users(request: Request) -> Response:
     """
     Возвращает отчёт по пользователям в формате xlsx
@@ -292,7 +291,7 @@ async def users(request: Request) -> Response:
 # MINIO
 ####################################################################################################
 
-@prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
+@prefix_router.get("/minio/base64/{bucket}/{filename}", tags=["minio"])
 async def minio(bucket: str, filename: str) -> Response:
     """
     Прокси к minio, который возвращает ответ в формате base64
@@ -306,7 +305,7 @@ async def minio(bucket: str, filename: str) -> Response:
         'mime':  content_type
     })
 
-@prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"], dependencies=[Depends(verify_token)])
+@prefix_router.get("/minio/{bucket}/{filename}", tags=["minio"])
 async def minio(bucket: str, filename: str) -> Response:
     """
     Прокси к minio, который возвращает файл
@@ -337,7 +336,7 @@ async def fields() -> RedirectResponse:
     return RedirectResponse(url=f"{provider.config.path_prefix}/fields/{first_field_branch_id}", status_code=HTTP_302_FOUND)
 
 @prefix_router.get("/fields/{branch_id}", tags=["fields"])
-async def fields(branch_id: int, request: Request) -> HTMLResponse:
+async def fields(branch_id: int, request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает пользовательские поля
     """
@@ -354,7 +353,7 @@ async def fields(branch_id: int, request: Request) -> HTMLResponse:
     fields          = list(fields_selected.scalars().all())
 
     return template(
-        request=request, template_name="fields.j2.html",
+        request=request, user=user, template_name="fields.j2.html",
         additional_context = {
             'title':             provider.config.i18n.fields,
             'field_branch_id':   branch_id,
@@ -364,7 +363,7 @@ async def fields(branch_id: int, request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/fields/{branch_id}", tags=["fields"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/fields/{branch_id}", tags=["fields"])
 async def fields(branch_id: int, request: Request) -> JSONResponse:
     """
     Изменяет настройки веток пользовательских полей
@@ -393,7 +392,7 @@ async def fields(branch_id: int, request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/field_branches", tags=["field_branches"])
-async def field_branches(request: Request) -> HTMLResponse:
+async def field_branches(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает ветки пользовательскх полей
     """
@@ -405,7 +404,7 @@ async def field_branches(request: Request) -> HTMLResponse:
     field_branches = list(field_branches_selected.scalars().all())
 
     return template(
-        request=request, template_name="field_branches.j2.html",
+        request=request, user=user, template_name="field_branches.j2.html",
         additional_context = {
             'title':  provider.config.i18n.field_branches,
             'field_branches': field_branches,
@@ -413,7 +412,7 @@ async def field_branches(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/field_branches", tags=["field_branches"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/field_branches", tags=["field_branches"])
 async def field_branches(request: Request) -> JSONResponse:
     """
     Изменяет настройки веток пользовательских полей
@@ -436,7 +435,7 @@ async def field_branches(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/replyable_condition_messages", tags=["replyable_condition_messages"])
-async def replyable_condition_messages(request: Request) -> HTMLResponse:
+async def replyable_condition_messages(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает сообщения с условиями и ответами
     """
@@ -456,7 +455,7 @@ async def replyable_condition_messages(request: Request) -> HTMLResponse:
     field_branches               = list(field_branches_selected.scalars().all())
 
     return template(
-        request=request, template_name="replyable_condition_messages.j2.html",
+        request=request, user=user, template_name="replyable_condition_messages.j2.html",
         additional_context = {
             'title': provider.config.i18n.replyable_condition_messages,
             'replyable_condition_messages': replyable_condition_messages,
@@ -466,7 +465,7 @@ async def replyable_condition_messages(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/replyable_condition_messages", tags=["replyable_condition_messages"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/replyable_condition_messages", tags=["replyable_condition_messages"])
 async def replyable_condition_messages(request: Request) -> JSONResponse:
     """
     Изменяет настройки сообщений с условиями и ответами
@@ -509,7 +508,7 @@ async def replyable_condition_messages(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/keyboard_keys", tags=["keyboard_keys"])
-async def keyboard_keys(request: Request) -> HTMLResponse:
+async def keyboard_keys(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает кнопки клавиатуры
     """
@@ -529,7 +528,7 @@ async def keyboard_keys(request: Request) -> HTMLResponse:
     field_branches               = list(field_branches_selected.scalars().all())
 
     return template(
-        request=request, template_name="keyboard_keys.j2.html",
+        request=request, user=user, template_name="keyboard_keys.j2.html",
         additional_context = {
             'title': provider.config.i18n.keyboard_keys,
             'keyboard_keys':                keyboard_keys,
@@ -539,7 +538,7 @@ async def keyboard_keys(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/keyboard_keys", tags=["keyboard_keys"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/keyboard_keys", tags=["keyboard_keys"])
 async def keyboard_keys(request: Request) -> JSONResponse:
     """
     Изменяет настройки клавиш клавиатуры
@@ -576,7 +575,7 @@ async def keyboard_keys(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/notifications", tags=["notifications"])
-async def notifications(request: Request) -> HTMLResponse:
+async def notifications(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает уведомления
     """
@@ -592,7 +591,7 @@ async def notifications(request: Request) -> HTMLResponse:
     replyable_condition_messages = list(replyable_condition_messages_selected.scalars().all())
 
     return template(
-        request=request, template_name="notifications.j2.html",
+        request=request, user=user, template_name="notifications.j2.html",
         additional_context = {
             'title': provider.config.i18n.notifications,
             'notifications':                notifications,
@@ -601,7 +600,7 @@ async def notifications(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/notifications", tags=["notifications"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/notifications", tags=["notifications"])
 async def notifications(request: Request) -> JSONResponse:
     """
     Изменяет настройки уведомлений
@@ -624,7 +623,7 @@ async def notifications(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/groups", tags=["groups"])
-async def groups(request: Request) -> HTMLResponse:
+async def groups(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает все группы телеграм
     """
@@ -636,7 +635,7 @@ async def groups(request: Request) -> HTMLResponse:
     groups = groups_selected.scalars().all()
 
     return template(
-        request=request, template_name="groups.j2.html",
+        request=request, user=user, template_name="groups.j2.html",
         additional_context = {
             'title':  provider.config.i18n.groups,
             'groups': groups,
@@ -644,7 +643,7 @@ async def groups(request: Request) -> HTMLResponse:
         }
     )
 
-@prefix_router.post("/groups", tags=["groups"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/groups", tags=["groups"])
 async def groups(request: Request) -> JSONResponse:
     """
     Изменяет настройки групп телеграм
@@ -667,7 +666,7 @@ async def groups(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/settings", tags=["settings"])
-async def settings(request: Request) -> HTMLResponse:
+async def settings(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает настройки бота
     """
@@ -681,14 +680,14 @@ async def settings(request: Request) -> HTMLResponse:
         for key,default_dict in provider.config.defaults.model_dump().items()
     ]
     return template(
-        request=request, template_name="settings.j2.html",
+        request=request, user=user, template_name="settings.j2.html",
         additional_context = {
             'title':    provider.config.i18n.settings,
             'settings': settings_with_description
         }
     )
 
-@prefix_router.post("/settings", tags=["settings"], dependencies=[Depends(verify_token)])
+@prefix_router.post("/settings", tags=["settings"])
 async def settings(request: Request) -> JSONResponse:
     """
     Устанавливает настройки бота
@@ -726,7 +725,7 @@ async def settings(request: Request) -> JSONResponse:
 ####################################################################################################
 
 @prefix_router.get("/logs", tags=["logs"])
-async def logs(request: Request) -> HTMLResponse:
+async def logs(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
     """
     Показывает текущие логи работы бота
     """
@@ -737,7 +736,7 @@ async def logs(request: Request) -> HTMLResponse:
 
     logs = logs_selected.scalars().all()
     return template(
-        request=request, template_name="logs.j2.html",
+        request=request, user=user, template_name="logs.j2.html",
         additional_context = {
             'title': provider.config.i18n.logs,
             'logs':  logs
@@ -746,14 +745,7 @@ async def logs(request: Request) -> HTMLResponse:
 
 
 ####################################################################################################
-# Healthz
+# Router Include
 ####################################################################################################
-
-@prefix_router.get(f"/healthz", tags=["healthz"])
-async def healz() -> PlainTextResponse:
-    """
-    Возвращает состояние сервера
-    """
-    return PlainTextResponse("OK")
 
 app.include_router(prefix_router)

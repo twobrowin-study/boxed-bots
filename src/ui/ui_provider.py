@@ -1,6 +1,7 @@
 from sqlalchemy import select, insert
 from sqlalchemy.exc import IntegrityError
 
+from fastapi import Request
 from fastapi.security import OAuth2AuthorizationCodeBearer
 
 from loguru import logger
@@ -18,7 +19,27 @@ from utils.custom_types import (
     FieldStatusEnum
 )
 
-from ui.api_keycloak import APIKeycloak
+from ui.ui_keycloak import UIKeycloak
+
+class OAuth2AuthorizationCodeBearerOrCookie(OAuth2AuthorizationCodeBearer):
+    """Расширение стандартной зависимости OAuth2AuthorizationCodeBearer
+    При наличии куки Authorization и отсутствии хедера Authorization,
+    берет токен из куки.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        authorization_header = request.headers.get("Authorization")
+        authorization_cookie = request.cookies.get("Authorization")
+
+        if not authorization_header and authorization_cookie:
+            logger.info(
+                "No Authorization header, but cookie found - using Authorization cookie as Bearer token"
+            )
+            return authorization_cookie
+        else:
+            logger.info("Using default OAuth2AuthorizationCodeBearer behavior")
+            return await super().__call__(request)
+
 
 class UIProvider(BBProvider):
     """
@@ -28,14 +49,14 @@ class UIProvider(BBProvider):
     def __init__(self) -> None:
         super().__init__()
 
-        self.keycloak = APIKeycloak(
+        self.keycloak = UIKeycloak(
             server_url        = self.config.keycloak.url,
             realm_name        = self.config.keycloak.realm,
-            client_id         = self.config.keycloak.api_client,
-            client_secret_key = self.config.keycloak.api_secret
+            client_id         = self.config.keycloak.client,
+            client_secret_key = self.config.keycloak.secret.get_secret_value()
         )
         
-        self.oauth2_scheme = OAuth2AuthorizationCodeBearer(
+        self.oauth2_scheme = OAuth2AuthorizationCodeBearerOrCookie(
             authorizationUrl = f"{self.config.keycloak.url}/relams/{self.config.keycloak.realm}/protocol/openid-connect/auth",
             tokenUrl         = f"{self.config.keycloak.url}/relams/{self.config.keycloak.realm}/protocol/openid-connect/token",
         )

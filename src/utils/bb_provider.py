@@ -19,7 +19,7 @@ class BBProvider:
     def __init__(self) -> None:
         self.config    = create_config()
         self.db_engine = create_async_engine(
-                f"postgresql+asyncpg://{self.config.pg_user}:{self.config.pg_password}@localhost:5432/postgres", 
+                f"postgresql+asyncpg://{self.config.pg_user}:{self.config.pg_password.get_secret_value()}@localhost:5432/postgres", 
                 echo=False,
                 pool_size=10,
                 max_overflow=2,
@@ -28,7 +28,7 @@ class BBProvider:
                 pool_use_lifo=True
             )
         self.db_session = async_sessionmaker(bind = self.db_engine)
-        self.minio = MinIOClient(self.config.minio_root_user, self.config.minio_root_password, self.config.minio_secure, self.config.minio_host)
+        self.minio = MinIOClient(self.config.minio_root_user, self.config.minio_root_password.get_secret_value(), self.config.minio_secure, self.config.minio_host)
     
     async def _get_kv_object(self, session: AsyncSession, object_class: type[BotStatus|Settings]) -> BotStatus|Settings:
         """

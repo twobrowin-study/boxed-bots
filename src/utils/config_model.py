@@ -3,10 +3,11 @@ import yaml
 from dotenv import load_dotenv, find_dotenv
 from pydantic import (
     BaseModel,
+    SecretStr
 )
 from pydantic_settings import (
     BaseSettings,
-    SettingsConfigDict
+    SettingsConfigDict,
 )
 
 from loguru import logger
@@ -15,19 +16,17 @@ class Keycloak(BaseModel, extra="forbid"):
     """
     Настройки Keycloak
     """
-    url:       str
-    realm:     str
-    ui_client: str
-
-    api_client: str
-    api_secret: str
+    url:    str
+    realm:  str
+    client: str
+    secret: SecretStr
 
 class DefaultValue(BaseModel, extra="forbid"):
     """
     Значения по-умолчанию
     """
     description: str
-    value: str
+    value:       str
 
 class Defaults(BaseModel, extra="forbid"):
     """
@@ -246,10 +245,10 @@ class ConfigYaml(BaseSettings):
     path_prefix: str 
     
     pg_user:     str
-    pg_password: str
+    pg_password: SecretStr
     
     minio_root_user:     str
-    minio_root_password: str
+    minio_root_password: SecretStr
     minio_secure: bool
     minio_host:   str
 

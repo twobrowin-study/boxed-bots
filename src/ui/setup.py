@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import PlainTextResponse
 
 from contextlib import asynccontextmanager
 
@@ -81,6 +82,11 @@ app = FastAPI(
     lifespan     = lifespan
 )
 
-prefix_router = APIRouter(prefix = provider.config.path_prefix)
+app.mount(f"{provider.config.path_prefix}/assets", StaticFiles(directory=f"{provider.config.box_bot_home}/src/ui/assets"), name="assets")
 
-templates = Jinja2Templates(directory = f"{provider.config.box_bot_home}/src/ui/templates")
+@app.get(f"{provider.config.path_prefix}/healthz", tags=["healthz"])
+async def healz() -> PlainTextResponse:
+    """
+    Возвращает состояние сервера
+    """
+    return PlainTextResponse("OK")

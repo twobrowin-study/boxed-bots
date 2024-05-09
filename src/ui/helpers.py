@@ -1,40 +1,23 @@
 from enum import Enum
-from fastapi import Request, Depends
+from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse
-
-from typing import Annotated
-from fastapi.exceptions import HTTPException
-from starlette.status import HTTP_401_UNAUTHORIZED
-from datetime import datetime
+from fastapi.templating import Jinja2Templates
 
 from loguru import logger
-
-from ui.setup import provider, templates
-
-from utils.db_model import Base
+from datetime import datetime
 
 from sqlalchemy import insert, update
 from sqlalchemy.exc import IntegrityError
 
-async def verify_token(token: Annotated[str, Depends(provider.oauth2_scheme)]) -> str:
-    """
-    Убедиться в корректности токена
-    """
-    logger.info(f"Received Bearer token with request")
-    try:
-        user = provider.keycloak.decode_token(token)
-        if 'preferred_username' in user:
-            logger.success(f"Request from user {user['preferred_username']}")
-        else:
-            logger.warning(f"Request from user without preferred_username!!!")
-    except Exception as e:
-        logger.info(f"Bearer token could not be verified: {e}")
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail=f"Bearer token could not be verified: {e}")
-    return token
+from ui.ui_keycloak import UIUser
+from ui.setup import provider
 
-def template(request: Request, template_name: str, additional_context: dict) -> HTMLResponse:
+from utils.db_model import Base
+
+
+templates = Jinja2Templates(directory = f"{provider.config.box_bot_home}/src/ui/templates")
+
+def template(request: Request, template_name: str, user: UIUser, additional_context: dict) -> HTMLResponse:
     """
     Прослойка для стандартизации вывода шиблонов
     """
@@ -43,7 +26,8 @@ def template(request: Request, template_name: str, additional_context: dict) -> 
         context = {
             'uri_prefix': provider.config.path_prefix,
             'i18n':       provider.config.i18n,
-            'keycloak':   provider.config.keycloak
+            'keycloak':   provider.config.keycloak,
+            'user':        user,
         } | additional_context
     )
 
