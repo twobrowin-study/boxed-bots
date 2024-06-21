@@ -187,3 +187,47 @@ report_send_every_x_active_users:
 report_currently_active_users_template:
   description: Количество зерегистрированных активных пользователей для оперативного оповещения администраторов
   value: У нас уже *{count}* зарегистрированных активных пользователей
+
+qr_code_user_field:
+  description: Название ветки и пользовательского поля, содержащего QR коды
+  value: QR-код
+
+qr_code_message:
+  description: Сообщение, посылаемое вместе с QR кодом пользователя
+  value: Ваш QR-код, покажите его на проходной для прохождения на территорию МГТУ им. Н.Э. Баумана
+
+no_qr_code_message:
+  description: Сообщение, посылаемое если пользователю не выдан QR код
+  value: Вам ещё не выдан QR-код, Вам следует пройти офлайн регистрацию с ПАСПОРТОМ по адресу 2-я Бауманская улица 5с12
+
+personal_notification_jinja_template:
+  description: Шаблон сообщения, высылаемого как персональное уведомление для пользователя
+  value: |-
+    {%- if 'Промокод' in field.key or 'промокод' in field.key -%}
+    Вам доступен *персональный* промокод:
+
+    {% endif -%}
+    *{{ field.key }}*: `{{ field.value }}`
+
+expired_promocodes_jinja_template:
+  description: Шаблон сообщения о просроченных промокодах
+  value: |-
+    Просрочены промокоды:
+
+    {%- for promocode in promocodes %}
+    *{{ promocode.source }}*: `{{ promocode.value }}`, был доступен до {{ promocode.expire_at }}
+    {%- endfor -%}
+
+avaliable_promocodes_jinja_template:
+  description: Шаблон сообщения о доступных промокодах
+  value: |-
+    Доступные промокоды:
+
+    {%- for promocode in promocodes %}
+    {% if promocode.expire_at %}
+    *{{ promocode.source }}*: `{{ promocode.value }}`, доступен до {{ promocode.expire_at.strftime('%d.%m.%Y') }}
+    {%- else %}
+    *{{ promocode.source }}*: `{{ promocode.value }}`
+    {%- endif %}
+    {% if promocode.description %}{{ promocode.description }}{% endif %}
+    {%- endfor -%}

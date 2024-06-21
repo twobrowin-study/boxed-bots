@@ -166,6 +166,27 @@ class UIProvider(BBProvider):
                 )
             )
 
+            qr_field_branch = await session.execute(
+                insert(FieldBranch).values(
+                    key    = settings.qr_code_user_field,
+                    status = FieldBranchStatusEnum.NORMAL,
+                    is_ui_editable  = True,
+                    is_bot_editable = False,
+                    is_deferrable   = False,
+                )
+            )
+
+            qr_field_branch_id: int = qr_field_branch.inserted_primary_key.t[0]
+
+            await session.execute(
+                insert(Field).values(
+                    key    = settings.qr_code_user_field,
+                    status = FieldStatusEnum.PERSONAL_NOTIFICATION,
+                    order_place = 0,
+                    branch_id   = qr_field_branch_id
+                )
+            )
+
             try:
                 await session.commit()
                 logger.success("FieldBranches and Fields tables with default values...")

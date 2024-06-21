@@ -31,7 +31,8 @@ from utils.db_model import (
     Notification,
     Group,
     Settings,
-    Log
+    Log,
+    Promocode
 )
 from utils.custom_types import (
     BotStatusEnum,
@@ -40,7 +41,9 @@ from utils.custom_types import (
     KeyboardKeyStatusEnum,
     NotificationStatusEnum,
     GroupStatusEnum,
-    ReplyTypeEnum
+    ReplyTypeEnum,
+    PersonalNotificationStatusEnum,
+    PromocodeStatusEnum
 )
 
 from ui.ui_keycloak import UIUser
@@ -138,6 +141,7 @@ async def users(branch_id: int, request: Request, user: Annotated[UIUser, Depend
     """
     Показывает пользователей
     """
+    settings = await provider.settings
     async with provider.db_session() as session:
         curr_field_branch_selected = await session.execute(
             select(FieldBranch).where(FieldBranch.id == branch_id)
@@ -152,6 +156,11 @@ async def users(branch_id: int, request: Request, user: Annotated[UIUser, Depend
         users_selected = await session.execute(
             select(User)
             .order_by(User.id.asc())
+        )
+
+        user_document_name_field = settings.user_document_name_field
+        user_document_name_field_id = await session.scalar(
+            select(Field.id).where(Field.key == user_document_name_field)
         )
 
         curr_field_branch = curr_field_branch_selected.scalar_one_or_none()
@@ -169,7 +178,12 @@ async def users(branch_id: int, request: Request, user: Annotated[UIUser, Depend
                 'curr_field_branch': curr_field_branch,
                 'field_branches':    field_branches,
                 'fields':            fields,
-                'users':             users
+                'users':             users,
+
+                'user_document_name_field': user_document_name_field,
+                'user_document_name_field_id': user_document_name_field_id,
+                'field_status_personal_notification': FieldStatusEnum.PERSONAL_NOTIFICATION,
+                'PersonalNotificationStatusEnum': PersonalNotificationStatusEnum
             }
         )
 
@@ -193,6 +207,7 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
             user_id = int(user_id)
 
             fields_request: dict[str, dict[str, str]] = fields_dict['fields']
+
             if not isinstance(fields_request, dict):
                 message = f"Fields request {fields_request=} is not dict"
                 logger.warning(message)
@@ -204,42 +219,60 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                     logger.warning(message)
                     return JSONResponse({'error': True, 'message': message}, status_code=500)
                 field_id = int(field_id)
+                value: str = field_value
 
-                if not isinstance(field_value, dict):
-                    message = f"Field value {field_value=} is not dict"
-                    logger.warning(message)
-                    return JSONResponse({'error': True, 'message': message}, status_code=500)
-
-                if 'value' not in field_value:
-                    message = f"Value not in field value {field_value=}"
-                    logger.warning(message)
-                    return JSONResponse({'error': True, 'message': message}, status_code=500)
-                value = field_value['value']
-
-                updated = await session.execute(
-                    update(UserFieldValue)
-                    .where(
-                        (UserFieldValue.user_id  == user_id) &
-                        (UserFieldValue.field_id == field_id)
-                    )
-                    .values(value = value)
+                prev_field = await session.scalar(
+                    select(UserFieldValue)
+                    .where(UserFieldValue.user_id  == user_id)
+                    .where(UserFieldValue.field_id == field_id)
                 )
 
-                if updated.rowcount == 0:
+                field = await session.scalar(select(Field).where(Field.id == field_id))
+                if not field:
+                    message = f"Field id {field_id=} was not found"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+
+                if isinstance(field_value, dict):
+                    if 'value' not in field_value:
+                        message = f"Value not in field value {field_value=}"
+                        logger.warning(message)
+                        return JSONResponse({'error': True, 'message': message}, status_code=500)
+                    value = field_value['value']
+                
+                personal_notification_status = None
+                if field.status == FieldStatusEnum.PERSONAL_NOTIFICATION:
+                    if value not in ["", None]:
+                        personal_notification_status = PersonalNotificationStatusEnum.TO_DELIVER
+                    else:
+                        personal_notification_status = PersonalNotificationStatusEnum.INACTIVE
+
+                if not prev_field:
                     await session.execute(
                         insert(UserFieldValue)
                         .values(
                             user_id  = user_id,
                             field_id = field_id,
-                            value    = value
+                            value    = value,
+                            personal_notification_status = personal_notification_status
                         )
                     )
-        
+
+                if prev_field and value != prev_field.value:
+                    await session.execute(
+                        update(UserFieldValue)
+                        .where(UserFieldValue.id == prev_field.id)
+                        .values(
+                            value = value,
+                            personal_notification_status = personal_notification_status
+                        )
+                    )
+
         await session.commit()
         return JSONResponse({'error': False}, status_code=200)
 
 @prefix_router.get("/users/report/xslx", tags=["users"])
-async def users(request: Request) -> Response:
+async def users() -> Response:
     """
     Возвращает отчёт по пользователям в формате xlsx
     """
@@ -566,6 +599,12 @@ async def keyboard_keys(request: Request) -> JSONResponse:
                     message = f"Did not found branch_id in keyboard_key object while status is ME"
                     logger.warning(message)
                     return JSONResponse({'error': True, 'message': message}, status_code=500)
+                
+            if keyboard_keys_attr['status'] == KeyboardKeyStatusEnum.BACK:
+                if 'parent_key_id' not in keyboard_keys_attr or not keyboard_keys_attr['parent_key_id']:
+                    message = f"Did not found parent_key_id in keyboard_key object while status is BACK"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
     
     return await try_to_save_attrs(KeyboardKey, keyboard_keys_attrs)
 
@@ -718,6 +757,49 @@ async def settings(request: Request) -> JSONResponse:
             await session.rollback()
             logger.error("Did not set Status table...")
             return JSONResponse({'error': True}, status_code=500)
+
+
+####################################################################################################
+# Promocodes
+####################################################################################################
+
+@prefix_router.get("/promocodes", tags=["promocodes"])
+async def promocodes(request: Request, user: Annotated[UIUser, Depends(verify_token)]) -> HTMLResponse:
+    """
+    Показывает настроенные промокоды
+    """
+    async with provider.db_session() as session:
+        promocodes_selected = await session.scalars(
+            select(Promocode).order_by(Promocode.id.asc())
+        )
+
+    promocodes = list(promocodes_selected.all())
+
+    return template(
+        request=request, user=user, template_name="promocodes.j2.html",
+        additional_context = {
+            'title':  provider.config.i18n.promocodes,
+            'promocodes': promocodes,
+            'promocode_status_enum': PromocodeStatusEnum
+        }
+    )
+
+@prefix_router.post("/promocodes", tags=["promocodes"])
+async def promocodes(request: Request) -> JSONResponse:
+    """
+    Изменяет настройки промокодов
+    """
+    request_data, bad_responce = await get_request_data_or_responce(request, 'promocodes')
+    if bad_responce:
+        return bad_responce
+
+    logger.info(f"Got promocodes update request with {request_data=}")
+
+    promocodes_attrs, bad_responce = prepare_attrs_object_from_request(request_data, PromocodeStatusEnum)
+    if bad_responce:
+        return bad_responce
+    
+    return await try_to_save_attrs(Promocode, promocodes_attrs)
 
 
 ####################################################################################################

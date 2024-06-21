@@ -99,8 +99,14 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
             )
             return await session.commit()
 
-        if await answer_to_user_keyboard_key_hit(update, context, user, session):
-            return
+        keyboard_key = await answer_to_user_keyboard_key_hit(update, context, user, session)
+        if keyboard_key:
+            await session.execute(
+                sql_udate(User)
+                .where(User.id == user.id)
+                .values(curr_keyboard_key_parent_id = keyboard_key.parent_key_id)
+            )
+            return await session.commit()
 
         logger.warning(f"Got unknown text message from user {chat_id=} and {username=}")
 

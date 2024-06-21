@@ -70,6 +70,14 @@ class Defaults(BaseModel, extra="forbid"):
     report_send_every_x_active_users:       DefaultValue
     report_currently_active_users_template: DefaultValue
 
+    qr_code_user_field: DefaultValue
+    qr_code_message:    DefaultValue
+    no_qr_code_message: DefaultValue
+
+    personal_notification_jinja_template: DefaultValue
+    expired_promocodes_jinja_template:    DefaultValue
+    avaliable_promocodes_jinja_template:  DefaultValue
+
     def model_dump_anythig(self, what_to_dump: str) -> dict[str, str]:
         full_dump: dict[str, dict[str, str]] = self.model_dump()
         return {
@@ -150,10 +158,11 @@ class I18n(BaseModel, extra="forbid"):
     status:      str
     description: str
 
-    group_inactive:    str
-    group_normal:      str
-    group_admin:       str
-    group_super_admin: str
+    group_inactive:     str
+    group_normal:       str
+    group_admin:        str
+    group_super_admin:  str
+    group_news_channel: str
 
     keyboard_keys: str
 
@@ -162,10 +171,15 @@ class I18n(BaseModel, extra="forbid"):
     text_markdown: str
     photo_link:    str
 
-    keyboard_key_inactive: str
-    keyboard_key_normal:   str
-    keyboard_key_deferred: str
-    keyboard_key_me:       str
+    keyboard_key_inactive:   str
+    keyboard_key_normal:     str
+    keyboard_key_deferred:   str
+    keyboard_key_me:         str
+    keyboard_key_qr:         str
+    keyboard_key_news:       str
+    keyboard_key_back:       str
+    keyboard_key_me_change:  str
+    keyboard_key_promocodes: str
 
     field_branches: str
     fields:         str
@@ -177,6 +191,8 @@ class I18n(BaseModel, extra="forbid"):
 
     field_branch_inactive: str
     field_branch_normal:   str
+    field_personal_notifiation: str
+    field_jinja2_from_user_on_create: str
 
     order_place:       str
     branch_id:         str
@@ -223,6 +239,26 @@ class I18n(BaseModel, extra="forbid"):
     defered: str
 
     download_file: str
+
+    parent_key_id: str
+
+    change: str
+    append: str
+
+    personal_notification_inactive: str
+    personal_notification_to_deliver: str
+    personal_notification_delivered: str
+
+    promocodes: str
+
+    promocode_active:   str
+    promocode_expired:  str
+    promocode_inactive: str
+
+    source:      str
+    value:       str
+    description: str
+    expire_at:   str
 
 class ConfigYaml(BaseSettings):
     """

@@ -10,21 +10,26 @@ from io import BytesIO
 from datetime import datetime
 from loguru import logger
 
+from jinja2 import Template
+
 from bot.application import BBApplication
 from utils.db_model import (
     User, Field,
     UserFieldValue,
     Settings,
     KeyboardKey,
-    ReplyableConditionMessage
+    ReplyableConditionMessage,
+    NewsPost
 )
 from utils.custom_types import (
     UserStatusEnum,
     KeyboardKeyStatusEnum,
     UserFieldDataPrepared,
-    ReplyTypeEnum
+    ReplyTypeEnum,
+    FieldStatusEnum
 )
 
+from bot.helpers.promocodes import send_promocodes
 from bot.handlers.group import group_send_to_all_admin_tasked
 
 from bot.helpers.keyboards import (
@@ -108,15 +113,35 @@ async def create_new_user_and_answer(update: Update, context: ContextTypes.DEFAU
         ),
         reply_markup = construct_keyboard_reply(first_question, app)
     )
-    await session.execute(
+    user = await session.scalar(
         insert(User).values(
             timestamp     = datetime.now(),
             chat_id       = chat_id,
             username      = username,
             curr_field_id = first_question.id
-        )
+        ).returning(User)
     )
-    logger.info(f"Creating new user {chat_id=} and {username=}")
+    if not user:
+        message = f"Was not able to create user {chat_id=} and {username=}"
+        logger.error(message)
+        raise Exception(message)
+    
+    fields_to_create = await session.scalars(
+        select(Field)
+        .where(Field.status == FieldStatusEnum.JINJA2_FROM_USER_ON_CREATE)
+    )
+
+    for field_to_create in fields_to_create:
+        await session.execute(
+            insert(UserFieldValue)
+            .values(
+                user_id = user.id,
+                field_id = field_to_create.id,
+                value = Template(field_to_create.question_markdown).render(user=user)
+            )
+        )
+
+    logger.info(f"Creating new user {chat_id=} and {username=} with {user.id=}")
 
 async def parse_start_help_commands_and_answer(update: Update, context: ContextTypes.DEFAULT_TYPE,
                                                user: User, settings: Settings, session: AsyncSession) -> None:
@@ -381,36 +406,11 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         message_id = update.message.id
     )
 
-    fields_selected = await session.execute(
-        select(Field)
-        .where(Field.branch_id == curr_field.branch_id)
-        .order_by(Field.order_place.asc())
+    fields, user_fields = await get_user_me_fields(
+        update, context,
+        user, curr_field.branch_id,
+        session
     )
-    fields = list(fields_selected.scalars())
-
-    user_fields = user.prepare_fields()
-
-    for field in fields:
-        if field.id not in user_fields:
-            user_fields[field.id] = UserFieldDataPrepared(
-                value = app.provider.config.i18n.data_empty,
-                document_bucket = field.document_bucket,
-                image_bucket    = field.image_bucket
-            )
-        
-        if user_fields[field.id].document_bucket:
-            user_fields[field.id] = UserFieldDataPrepared(
-                value = app.provider.config.i18n.document,
-                document_bucket = user_fields[field.id].document_bucket,
-                image_bucket    = user_fields[field.id].image_bucket
-            )
-
-        if user_fields[field.id].image_bucket:
-            user_fields[field.id] = UserFieldDataPrepared(
-                value = app.provider.config.i18n.image,
-                document_bucket = user_fields[field.id].document_bucket,
-                image_bucket    = user_fields[field.id].image_bucket
-            )
 
     fields_text = "\n".join([
         f"*{field.key}*: `{user_fields[field.id].value}`"
@@ -446,24 +446,39 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
     return False
 
 
-async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, session: AsyncSession) -> bool:
+async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, session: AsyncSession) -> KeyboardKey:
     """
     Отвечает на пользовательский запрос на кнопку клавиатуры
     """
     app: BBApplication = context.application
+    bot: Bot = app.bot
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
     keyboard_key = await get_keyboard_key_by_key_text(session, update.message.text)
     
     if not keyboard_key:
-        return False
+        return None
     
     logger.info(f"Got keyboard key heat from user {chat_id=} and {username=} {keyboard_key.key=}")
 
     if keyboard_key.status == KeyboardKeyStatusEnum.ME:
         await post_user_me_information(update, context, user, keyboard_key, session)
-        return True
+        return keyboard_key
+
+    if keyboard_key.status == KeyboardKeyStatusEnum.ME_CHANGE:
+        await send_user_change_information(update, context, user, keyboard_key, session)
+        return keyboard_key
+
+    if keyboard_key.status == KeyboardKeyStatusEnum.BACK:
+        parent_key = await session.scalar(
+            select(KeyboardKey).where(KeyboardKey.id == keyboard_key.parent_key_id)
+        )
+        await update.message.reply_markdown(
+            keyboard_key.key,
+            reply_markup = await get_keyboard_of_user(session, user, to_parent_key=parent_key)
+        )
+        return parent_key
 
     if keyboard_key.status == KeyboardKeyStatusEnum.DEFERRED:
         deferred_field: Field = user.deferred_field
@@ -481,56 +496,89 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
                 )
             )
             await session.commit()
-        return True
+        return keyboard_key
 
-    reply_condition_message: ReplyableConditionMessage = keyboard_key.reply_condition_message
+    if keyboard_key.status == KeyboardKeyStatusEnum.NEWS:
+        async with app.provider.db_session() as session:
+            news_posts = await session.scalars(
+                select(NewsPost).order_by(NewsPost.id.desc()).limit(10)
+            )
+            for news_post in news_posts.all():
+                await bot.forward_message(
+                    chat_id=chat_id,
+                    from_chat_id=news_post.chat_id,
+                    message_id=news_post.message_id
+                )
+        return keyboard_key
 
-    reply_markup = (
-        await get_awaliable_inline_keyboard_for_user(reply_condition_message, user, session)
-    ) or (
-        await get_keyboard_of_user(session, user)
-    )
+    if keyboard_key.status == KeyboardKeyStatusEnum.QR:
+        settings = await app.provider.settings
+        async with app.provider.db_session() as session:
+            qr_code = await session.scalar(
+                select(UserFieldValue.value)
+                .where(Field.key == settings.qr_code_user_field)
+                .where(UserFieldValue.user_id == user.id)
+                .where(UserFieldValue.field_id == Field.id)
+            )
+            if qr_code in [None, ""]:
+                await update.message.reply_markdown(settings.no_qr_code_message)
+            else:
+                await update.message.reply_photo(
+                    qr_code,
+                    caption=settings.qr_code_message,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+        return keyboard_key
+    
+    if keyboard_key.status == KeyboardKeyStatusEnum.PROMOCODES:
+        await send_promocodes(update, context)
+        return keyboard_key
+    
+    if keyboard_key.status == KeyboardKeyStatusEnum.NORMAL:
+        reply_condition_message: ReplyableConditionMessage = keyboard_key.reply_condition_message
 
-    if reply_condition_message.photo_link in [None, '']:
-        await update.message.reply_markdown(
-            reply_condition_message.text_markdown,
-            reply_markup = reply_markup
+        reply_markup = (
+            await get_awaliable_inline_keyboard_for_user(reply_condition_message, user, session)
+        ) or (
+            await get_keyboard_of_user(session, user, from_parent_key=keyboard_key)
         )
-        return True
 
-    if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) <= 1024:
-        await update.message.reply_photo(
-            reply_condition_message.photo_link,
-            caption = reply_condition_message.text_markdown,
-            reply_markup = reply_markup,
-            parse_mode = ParseMode.MARKDOWN
-        )
-        return True
+        if reply_condition_message.photo_link in [None, '']:
+            await update.message.reply_markdown(
+                reply_condition_message.text_markdown,
+                reply_markup = reply_markup
+            )
+            return keyboard_key
 
-    if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) > 1024:
-        await update.message.reply_photo(reply_condition_message.photo_link)
-        await update.message.reply_markdown(
-            reply_condition_message.text_markdown,
-            reply_markup = reply_markup
-        )
-        return True
+        if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) <= 1024:
+            await update.message.reply_photo(
+                reply_condition_message.photo_link,
+                caption = reply_condition_message.text_markdown,
+                reply_markup = reply_markup,
+                parse_mode = ParseMode.MARKDOWN
+            )
+            return keyboard_key
 
-    return False
+        if reply_condition_message.photo_link not in [None, ''] and len(reply_condition_message.text_markdown) > 1024:
+            await update.message.reply_photo(reply_condition_message.photo_link)
+            await update.message.reply_markdown(
+                reply_condition_message.text_markdown,
+                reply_markup = reply_markup
+            )
+            return keyboard_key
 
-async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                   user: User, keyboard_key: KeyboardKey, session: AsyncSession) -> None:
-    """
-    Отправляет информацию о пользователе по нажатию кноки "Обо мне" по заданной в клавише ветке вопросов
-    """
+    return None
+
+async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                 user: User, branch_id: int, session: AsyncSession) -> tuple[list[Field], dict[int, UserFieldDataPrepared]]:
+    """Получает информацию о пользователе по нажатию кнопкии "Обо мне" или "Изменить профиль"""""
     app: BBApplication = context.application
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
-    logger.info(f"Sending ME info to user {chat_id=} {username=} by branch {keyboard_key.branch_id=}")
-
     fields_selected = await session.execute(
         select(Field)
-        .where(Field.branch_id == keyboard_key.branch_id)
+        .where(Field.branch_id == branch_id)
         .order_by(Field.order_place.asc())
     )
     fields = list(fields_selected.scalars())
@@ -542,44 +590,94 @@ async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT
             user_fields[field.id] = UserFieldDataPrepared(
                 value = app.provider.config.i18n.data_empty,
                 document_bucket = field.document_bucket,
-                image_bucket    = field.image_bucket
+                image_bucket    = field.image_bucket,
+                empty = True
             )
+            continue
         
         if user_fields[field.id].document_bucket:
             logger.info(f"Trying to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
-            try:
-                bio, _ = await app.provider.minio.download(
-                    user_fields[field.id].document_bucket,
-                    user_fields[field.id].value
-                )
-                await update.message.reply_document(bio)
-            except Exception:
-                logger.warning('Was not able to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}')
+            if update.message:
+                try:
+                    bio, _ = await app.provider.minio.download(
+                        user_fields[field.id].document_bucket,
+                        user_fields[field.id].value
+                    )
+                    await update.message.reply_document(bio)
+                except Exception:
+                    logger.warning('Was not able to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}')
 
             user_fields[field.id] = UserFieldDataPrepared(
                 value = app.provider.config.i18n.document,
                 document_bucket = user_fields[field.id].document_bucket,
                 image_bucket    = user_fields[field.id].image_bucket
             )
+            continue
 
         if user_fields[field.id].image_bucket:
             logger.info(f"Trying to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
-            try:
-                bio, _ = await app.provider.minio.download(
-                    user_fields[field.id].image_bucket,
-                    user_fields[field.id].value.replace('_thumbnail', '')
-                )
-                await update.message.reply_photo(bio)
-            except Exception:
-                logger.warning('Was not able to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}')
+            if update.message:
+                try:
+                    bio, _ = await app.provider.minio.download(
+                        user_fields[field.id].image_bucket,
+                        user_fields[field.id].value.replace('_thumbnail', '')
+                    )
+                    await update.message.reply_photo(bio)
+                except Exception:
+                    logger.warning(f'Was not able to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}')
 
             user_fields[field.id] = UserFieldDataPrepared(
                 value = app.provider.config.i18n.image,
                 document_bucket = user_fields[field.id].document_bucket,
                 image_bucket    = user_fields[field.id].image_bucket
             )
+            continue
+    
+    return fields, user_fields
+
+async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                   user: User, keyboard_key: KeyboardKey, session: AsyncSession) -> None:
+    """
+    Отправляет информацию о пользователе по нажатию кноки "Обо мне" по заданной в клавише ветке вопросов
+    """
+    chat_id  = update.effective_user.id
+    username = update.effective_user.username
+
+    logger.info(f"Sending ME info to user {chat_id=} {username=} by branch {keyboard_key.branch_id=}")
+
+    fields, user_fields = await get_user_me_fields(
+        update, context,
+        user, keyboard_key.branch_id,
+        session
+    )
+
+    fields_text = "\n".join([
+        f"*{field.key}*: `{user_fields[field.id].value}`"
+        for field in fields
+    ])
+
+    await update.message.reply_markdown(
+        fields_text,
+        reply_markup = await get_keyboard_of_user(session, user, from_parent_key=keyboard_key)
+    )
+
+async def send_user_change_information(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                       user: User, keyboard_key: KeyboardKey, session: AsyncSession) -> None:
+    """
+    Отправляет пользователю кнопки на исправление данных о себе по нажатой выше кнопке
+    """
+    app: BBApplication = context.application
+    chat_id  = update.effective_user.id
+    username = update.effective_user.username
+    logger.info(f"Sending ME_CHANGE keys to user {chat_id=} {username=} by branch {keyboard_key.branch_id=}")
+
+    fields, user_fields = await get_user_me_fields(
+        update, context,
+        user, keyboard_key.branch_id,
+        session
+    )
 
     fields_text = "\n".join([
         f"*{field.key}*: `{user_fields[field.id].value}`"
@@ -590,7 +688,7 @@ async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT
         fields_text,
         reply_markup = InlineKeyboardMarkup([
             [InlineKeyboardButton(
-                text=user_fields[field.id].value,
+                text=f"{app.provider.config.i18n.change if not user_fields[field.id].empty else app.provider.config.i18n.append} {field.key}",
                 callback_data=UserChangeFieldCallback.TEMPLATE.format(field_id = field.id)
             )]
             for field in fields

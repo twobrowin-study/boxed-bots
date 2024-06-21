@@ -1,0 +1,53 @@
+{% extends "base.j2.html" %}
+
+{% block content %}
+  <table id="promocodes-table" class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th id="promocodes-status"     >{{ i18n.status }}</th>
+        <th id="promocodes-source"     >{{ i18n.source }}</th>
+        <th id="promocodes-value"      >{{ i18n.value }}</th>
+        <th id="promocodes-description">{{ i18n.description }}</th>
+        <th id="promocodes-expire_at"  >{{ i18n.expire_at }}</th>
+        <th id="promocodes-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for promocode in promocodes %}
+        <tr id="promocodes-{{ promocode.id }}">
+          <td id="promocodes-{{ promocode.id }}-status" class="row-editable">
+            <select id="promocodes-{{ promocode.id }}-status-value" class="form-select" disabled>
+              {% for status in promocode_status_enum %}
+                <option
+                  value="{{ status.value }}"
+                  {% if status == promocode.status %}selected='true'{% endif %}
+                >
+                  {{ i18n['promocode_' + status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="promocodes-{{ promocode.id }}-source" class="row-editable">{{ promocode.source }}</td>
+          <td id="promocodes-{{ promocode.id }}-value"  class="row-editable">{{ promocode.value }}</td>
+          <td id="promocodes-{{ promocode.id }}-description" class="row-editable" style="white-space: pre-line">{% if promocode.description %}{{ promocode.description }}{% endif %}</td>
+          <td id="promocodes-{{ promocode.id }}-expire_at-date_value" class="row-editable">{% if promocode.expire_at %}{{ promocode.expire_at }}{% endif %}</td>
+          <td id="promocodes-{{ promocode.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
+        </tr>
+      {% endfor %}
+      <tr id="promocodes-new" class="elem-new d-none">
+        <td id="promocodes-new-status" class="row-editable table-info">
+          <select id="promocodes-new-status-value" class="form-select">
+            {% for status in promocode_status_enum %}
+              <option value="{{ status.value }}">{{ i18n['promocode_' + status.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="promocodes-new-source"               class="row-editable table-info" contenteditable="true"></td>
+        <td id="promocodes-new-value"                class="row-editable table-info" contenteditable="true"></td>
+        <td id="promocodes-new-description"          class="row-editable table-info" contenteditable="true"></td>
+        <td id="promocodes-new-expire_at-date_value" class="row-editable table-info" contenteditable="true"></td>
+        <td id="promocodes-new-edit" class="table-info"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

@@ -7,12 +7,12 @@ from telegram import (
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from loguru import logger
 
-from utils.db_model import Group
+from utils.db_model import Group, NewsPost
 from utils.custom_types import GroupStatusEnum
 
 from bot.application import BBApplication
@@ -137,3 +137,34 @@ async def group_report_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     logger.info(f"Got report command from group {chat_id=} and {group_name=} as {group.status=}")
     
     await update.message.reply_markdown("Here will be kinda report")
+
+async def channel_publication_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Обработчик публикации в канале новостей
+    """
+    app: BBApplication = context.application
+    chat_id    = update.effective_chat.id
+    group_name = update.effective_chat.effective_name
+    group      = await _get_group_by_chat_id_or_none(app, chat_id)
+
+    if not group:
+        return logger.info(f"Got publication from unknown group {chat_id=} and {group_name=}")
+    
+    if group.status != GroupStatusEnum.NEWS_CHANNEL:
+        return logger.info(f"Got publication from group {chat_id=} and {group_name=} as {group.status=}... ignoring")
+    
+    if update.effective_message.text == None and update.effective_message.caption == None:
+        return logger.warning(f"Got publication from group {chat_id=} and {group_name=} as {group.status=} without text, so it is propably is on of previuos post photo... ignoring")
+    
+    logger.info(f"Got publication from group {chat_id=} and {group_name=} as {group.status=}")
+    
+    message_id = update.effective_message.id
+    async with app.provider.db_session() as session:
+        await session.execute(
+            insert(NewsPost).values(
+                chat_id = chat_id,
+                message_id = message_id
+            )
+        )
+        await session.commit()
+        logger.success(f"Added new news publication from {chat_id=} with {message_id=}")

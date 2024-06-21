@@ -23,6 +23,7 @@ from bot.handlers.default import (
 from bot.handlers.group import (
     group_help_handler,
     group_report_handler,
+    channel_publication_handler,
 )
 
 from bot.handlers.user import (
@@ -74,8 +75,9 @@ def map_default_handlers(app: BBApplication) -> None:
     # Group handlers
     ##
     app.add_handlers([
-        CommandHandler(app.HELP_COMMAND,   group_help_handler, filters=ChatType.GROUPS, block=False),
-        CommandHandler(app.REPORT_COMMAND, group_report_handler, filters=ChatType.GROUPS, block=False),
+        CommandHandler(app.HELP_COMMAND,   group_help_handler,   filters=ChatType.GROUPS,     block=False),
+        CommandHandler(app.REPORT_COMMAND, group_report_handler, filters=ChatType.GROUPS,     block=False),
+        MessageHandler(ChatType.CHANNEL & ~UpdateType.EDITED,    channel_publication_handler, block=False),
     ], group=app.UPDATE_GROUP_GROUP_REQUEST)
 
     ##

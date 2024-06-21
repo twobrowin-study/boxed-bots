@@ -85,7 +85,7 @@ def prepare_attrs_object_from_request(
                 elif 'id_value' in value:
                     obj[key] = None if value['id_value'] == 'None' else int(value['id_value'])
                 elif 'date_value' in value:
-                    obj[key] = None if value['date_value'] == 'None' else datetime.fromisoformat(value['date_value'])
+                    obj[key] = None if value['date_value'] in ['', None, 'None'] else datetime.fromisoformat(value['date_value'])
                 else:
                     obj[key] = None if value['value'] == 'None' else status_type(**value)
             else:

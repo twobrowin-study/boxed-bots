@@ -23,7 +23,9 @@ from utils.custom_types import (
     NotificationStatusEnum,
     UserFieldDataPlain,
     UserFieldDataPrepared,
-    UserDataPrepared
+    UserDataPrepared,
+    PersonalNotificationStatusEnum,
+    PromocodeStatusEnum
 )
 from utils.config_model import I18n
 
@@ -196,6 +198,9 @@ class User(Base):
     curr_reply_message = relationship('ReplyableConditionMessage', lazy='selectin')
     """Сообщения, на которое на данный момент отвечает пользователь"""
 
+    curr_keyboard_key_parent_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
+    """Id родительской кнопки последней клавиши, на которую нажал пользователь"""
+
     def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None) -> dict[str, str]:
         """
         Преобразовать в плоский словарь для табличной выгрузки
@@ -246,7 +251,8 @@ class User(Base):
                 field_value.field_id: UserFieldDataPrepared(
                     value = field_value.value,
                     document_bucket = field.document_bucket,
-                    image_bucket    = field.image_bucket
+                    image_bucket    = field.image_bucket,
+                    personal_notification_status = field_value.personal_notification_status
                 )
             }
         return fields
@@ -269,6 +275,8 @@ class UserFieldValue(Base):
 
     field = relationship('Field', lazy='selectin')
 
+    personal_notification_status: Mapped[PersonalNotificationStatusEnum] = mapped_column(nullable=True, default=None)
+
 class KeyboardKey(Base):
     """
     Кнопки клавиатуры - основное взаимодействие с ботом
@@ -287,6 +295,9 @@ class KeyboardKey(Base):
 
     branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=True)
     """Id Ветки, на основе которой отображаются данные для модификации или возврата при статусе KeyboardKeyStatusEnum.ME"""
+
+    parent_key_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
+    """Id клавиши, которая является родительской для данной кнопки"""
 
 class Notification(Base):
     """
@@ -360,3 +371,46 @@ class Settings(Base):
     report_send_every_x_active_users:       Mapped[str] = mapped_column(nullable=False)
     report_currently_active_users_template: Mapped[str] = mapped_column(nullable=False)
     
+    qr_code_user_field: Mapped[str] = mapped_column()
+    """Название ветки и пользовательского поля, содержащего QR коды"""
+    qr_code_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое вместе с QR кодом пользователя"""
+    no_qr_code_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое если пользователю не выдан QR код"""
+
+    personal_notification_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения, высылаемого как персональное уведомление для пользователя"""
+    expired_promocodes_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения о просроченных промокодах"""
+    avaliable_promocodes_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения о доступных промокодах"""
+
+class NewsPost(Base):
+    """Класс новостных сообщений"""
+
+    __tablename__ = "news_posts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    """Уникальный идентификатор"""
+    chat_id: Mapped[int] = mapped_column(nullable=False, index=False, unique=False, type_=BigInteger)
+    """Уникальный идентификатор канала новостей"""
+    message_id: Mapped[int] = mapped_column(nullable=False, index=False, unique=True, type_=BigInteger)
+    """Уникальный идентификатор сообщения новостей"""
+
+class Promocode(Base):
+    """Доступные промокоды"""
+
+    __tablename__ = "promocodes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    """Уникальный идентификатор"""
+    status: Mapped[PromocodeStatusEnum] = mapped_column()
+    """Статус промокода"""
+    source: Mapped[str] = mapped_column()
+    """Источник промокода - организация"""
+    value: Mapped[str] = mapped_column()
+    """Значение промокода"""
+    description: Mapped[str|None] = mapped_column()
+    """Описание промокода"""
+    expire_at: Mapped[datetime|None] = mapped_column()
+    """Время окончания действия промокода"""
