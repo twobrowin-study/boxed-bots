@@ -1,0 +1,93 @@
+---
+#############################################################################
+#      0) Взять секреты из vault и добавить SSH ключи в known_hosts         #
+#############################################################################
+
+- name: Pull secrets from vault
+  hosts: all
+  gather_facts: false
+  tags:
+    - always
+  roles:
+    - role: bmstu.vats.init
+      vault_path_secrets:
+        - boxed-bots/data/main,infrastructure-secrets.yaml
+        - boxed-bots/data/bmstu-alumni-bot,secrets.yaml
+
+#############################################################################
+#                       1) Запуск сервиса                                   #
+#############################################################################
+
+- name: Run bot service
+  hosts: managers
+  tags:
+    - deploy
+  roles:
+    - role: bmstu.vats.generic_deploy
+      compose_template_path: docker-compose.j2.yaml
+      stack_name:  boxed-bots
+      stack_prune: false
+      workdir:     "{{ home }}/{{ secrets.bot.id }}"
+
+#############################################################################
+#                2) Подготовка конфигураций Nginx                           #
+#############################################################################
+
+- name: Copy nginx configs
+  hosts: managers
+  tags:
+    - nginx_config
+  vars:
+    bot_json_path: /tmp/boxed_bot.json
+    bots_json_full_path: "{{ home }}/htmls/boxed-bots.json"
+  tasks:
+    - name: Template nginx locaions and servers
+      template:
+        src:  "{{ item }}"
+        dest: "{{ home }}/nginx/boxed-bots/{{ secrets.bot.id }}.conf.template.conf"
+      with_fileglob: nginx/*.conf
+    
+    - name: Template bot json into tmp
+      template:
+        src:  nginx/bot.j2.json
+        dest: "{{ bot_json_path }}"
+
+    - name: Get templated file content
+      shell: cat {{ bot_json_path }}
+      args:
+        executable: /bin/bash
+      register: bot_json_content
+    
+    - name: Set templated file content fact
+      set_fact:
+        bot_json_content: "{{ bot_json_content.stdout | replace('\n', '') }}"
+    
+    - name: Check if bot json is not present in full json file
+      shell: >-
+        cat {{ bots_json_full_path }} | jq 'index([{{ bot_json_content | to_json }}])'
+      args:
+        executable: /bin/bash
+      register: bot_json_check
+    
+    - name: Add bot json to full json file
+      shell: >-
+        cat {{ bots_json_full_path }} | jq '. += [{{ bot_json_content | to_json }}]'
+      args:
+        executable: /bin/bash
+      when: bot_json_check.stdout == 'null'
+      register: bot_json_append
+    
+    - name: Check if append ened up correctly
+      debug:
+        msg: "{{ bot_json_append.stdout }}"
+      when: bot_json_check.stdout == 'null'
+    
+    - name: Write into bots full json
+      copy:
+        content: "{{ bot_json_append.stdout }}"
+        dest: "{{ bots_json_full_path }}"
+      when: bot_json_check.stdout == 'null'
+  
+  roles:
+    - role: bmstu.vats.restart_service
+      service_name: nginx

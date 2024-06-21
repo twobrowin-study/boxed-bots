@@ -1,0 +1,11 @@
+all:
+  hosts:
+    boxed-bots:
+  vars:
+    vault_path_inventory: boxed-bots/data/main,inventory-secrets.yaml
+    home: "/home/{{ ansible_user }}"
+    letsencrypt_path: "/etc/letsencrypt"
+
+managers:
+  hosts:
+    boxed-bots:

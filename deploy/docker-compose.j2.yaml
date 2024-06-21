@@ -1,0 +1,69 @@
+version: '3.9'
+
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "500m"
+    max-file: "2"
+
+services:
+  {{ secrets.bot.id }}:
+    image: twobrowin/bmstu-alumni-bot:1.0.0
+    logging: *default-logging
+    ports:
+      - target:    5432
+        published: {{ secrets.postgres.port }}
+        protocol:  tcp
+        mode:      host
+      - target:    9000
+        published: {{ secrets.minio.port_api }}
+        protocol:  tcp
+        mode:      host
+      - target:    9001
+        published: {{ secrets.minio.port_ui }}
+        protocol:  tcp
+        mode:      host
+    networks:
+      - boxed-bots-proxy
+    volumes:
+      - data:/var/opt/box-bot
+      
+      - "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/fullchain.pem:/minio-certs/public.crt"
+      - "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/privkey.pem:/minio-certs/private.key"
+
+      - "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/fullchain.pem:/pg-certs/server.crt"
+      - "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/privkey.pem:/pg-certs/server.key"
+    environment:
+      TZ: "Europe/Moscow"
+      START_SERVICES: "true"
+      PATH_PREFIX: "/{{ secrets.bot.id }}"
+
+      MINIO_CERTDIR: "/minio-certs"
+      MINIO_HOST:    "{{ secrets.server_name }}:{{ secrets.minio.port_api }}"
+      
+      PG_SSL: "on"
+      PG_CERTDIR: "/pg-certs"
+
+      KEYCLOAK__URL: "https://{{ secrets.server_name }}{{ secrets.keycloak.url_path }}/"
+      KEYCLOAK__REALM:      "{{ secrets.keycloak.realm }}"
+      KEYCLOAK__CLIENT: "{{ secrets.keycloak.client }}"
+      KEYCLOAK__SECRET: "{{ secrets.keycloak.secrets }}"
+      
+      TG_TOKEN: "{{ secrets.tg_api }}"
+      
+      PG_USER:     "{{ secrets.postgres.user }}"
+      PG_PASSWORD: "{{ secrets.postgres.password }}"
+      
+      MINIO_ROOT_USER:     "{{ secrets.minio.user }}"
+      MINIO_ROOT_PASSWORD: "{{ secrets.minio.password }}"
+    deploy:
+      replicas: 1
+
+networks:
+  boxed-bots-proxy:
+    name: boxed-bots-proxy
+    external: true
+
+volumes:
+  data:

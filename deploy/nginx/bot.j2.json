@@ -1,0 +1,6 @@
+{
+    "id":   "{{ secrets.bot.id }}",
+    "path": "/{{ secrets.bot.id }}",
+    "name": "{{ secrets.bot.name }}",
+    "description": "{{ secrets.bot.description }}"
+}
