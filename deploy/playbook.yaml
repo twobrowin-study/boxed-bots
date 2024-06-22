@@ -25,8 +25,8 @@
   roles:
     - role: bmstu.vats.generic_deploy
       compose_template_path: docker-compose.j2.yaml
-      stack_name:  boxed-bots
-      stack_prune: false
+      stack_name:  "{{ secrets.bot.id }}"
+      stack_prune: true
       workdir:     "{{ home }}/{{ secrets.bot.id }}"
 
 #############################################################################
