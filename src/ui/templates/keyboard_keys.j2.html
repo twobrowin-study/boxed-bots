@@ -58,13 +58,11 @@
             <select id="keyboard_keys-{{ keyboard_key.id }}-parent_key_id-id_value" class="form-select" disabled>
               <option value="None" {% if not keyboard_key.parent_key_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
                 {% for parent_keyboard_key in keyboard_keys %}
-                  {% if not parent_keyboard_key.parent_key_id %}
-                    <option value="{{ parent_keyboard_key.id }}"
-                      {% if parent_keyboard_key.id == keyboard_key.parent_key_id %}selected='true'{% endif %}
-                    >
-                      {{ parent_keyboard_key.key }}
-                    </option>
-                  {% endif %}
+                  <option value="{{ parent_keyboard_key.id }}"
+                    {% if parent_keyboard_key.id == keyboard_key.parent_key_id %}selected='true'{% endif %}
+                  >
+                    {{ parent_keyboard_key.key }}
+                  </option>
                 {% endfor %}
             </select>
           </td>
@@ -102,11 +100,9 @@
           <select id="keyboard_keys-new-parent_key_id-id_value" class="form-select">
             <option value="None" selected='true'>{{ i18n.none }}</option>
               {% for parent_keyboard_key in keyboard_keys %}
-                {% if not parent_keyboard_key.parent_key_id %}
-                  <option value="{{ parent_keyboard_key.id }}">
-                    {{ parent_keyboard_key.key }}
-                  </option>
-                {% endif %}
+                <option value="{{ parent_keyboard_key.id }}">
+                  {{ parent_keyboard_key.key }}
+                </option>
               {% endfor %}
           </select>
         </td>

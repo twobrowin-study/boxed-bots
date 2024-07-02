@@ -39,3 +39,12 @@ class UserFastAnswerReplyCallback:
     """Шаблон данных"""
     PATTERN  = 'fast_answer_[0-9]+|[0-9]+|[0-9]+'
     """Паттерн регулярног выражения"""
+
+class UserSubmitQrCallback:
+    """Тип данных для регистрации кнопки отправки заявки на qr код"""
+    PATTERN = 'submit_qr'
+    STATE_SUBMIT_AWAIT = 1
+
+class GroupApproveQrConversation:
+    """Тип данных для регистрации статусов выгрузки таблицы пользователей с подтверждёнными qr кодами"""
+    XLSX_AWAIT = 1

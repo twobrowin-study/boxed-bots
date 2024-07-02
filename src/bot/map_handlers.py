@@ -2,12 +2,14 @@ from telegram.ext import (
     MessageHandler,
     ChatMemberHandler,
     CommandHandler,
-    CallbackQueryHandler
+    CallbackQueryHandler,
+    ConversationHandler
 )
 
 from telegram.ext.filters import (
     ChatType, UpdateType,
-    TEXT, PHOTO, Document
+    TEXT, PHOTO, Document,
+    Text
 )
 
 from loguru import logger
@@ -24,6 +26,10 @@ from bot.handlers.group import (
     group_help_handler,
     group_report_handler,
     channel_publication_handler,
+    group_download_submited_key_handler,
+    group_upload_aproved_qr_xlsx_start_handler,
+    group_upload_aproved_qr_xlsx_cancel_handler,
+    group_upload_aproved_qr_xlsx_document_handler,
 )
 
 from bot.handlers.user import (
@@ -33,7 +39,10 @@ from bot.handlers.user import (
     user_change_state_callback,
     branch_start_callback_handler,
     full_text_callback_handler,
-    fast_answer_callback_handler
+    fast_answer_callback_handler,
+    qr_submit_callback_handler,
+    qr_submit_approve_handler,
+    qr_submit_cancel_handler,
 )
 
 from bot.handlers.notification import notify_job
@@ -42,7 +51,9 @@ from bot.callback_constants import (
     UserChangeFieldCallback,
     UserStartBranchReplyCallback,
     UserFullTextAnswerReplyCallback,
-    UserFastAnswerReplyCallback
+    UserFastAnswerReplyCallback,
+    UserSubmitQrCallback,
+    GroupApproveQrConversation,
 )
 
 def map_service_mode_handlers(app: BBApplication) -> None:
@@ -74,15 +85,49 @@ def map_default_handlers(app: BBApplication) -> None:
     ##
     # Group handlers
     ##
+    app.add_handler(ConversationHandler(
+        entry_points = [
+            MessageHandler(Text(app.provider.config.i18n.send_approved) & ChatType.GROUP, group_upload_aproved_qr_xlsx_start_handler),
+        ],
+        states = {
+            GroupApproveQrConversation.XLSX_AWAIT: [
+                MessageHandler(Document.ALL & ChatType.GROUP, group_upload_aproved_qr_xlsx_document_handler),
+            ],
+        },
+        fallbacks = [
+            MessageHandler(Text(app.provider.config.i18n.cancel) & ChatType.GROUP, group_upload_aproved_qr_xlsx_cancel_handler),
+            CommandHandler(app.HELP_COMMAND, group_help_handler, filters=ChatType.GROUPS),
+        ],
+        block = False
+    ), group=app.UPDATE_GROUP_GROUP_REQUEST)
+
     app.add_handlers([
         CommandHandler(app.HELP_COMMAND,   group_help_handler,   filters=ChatType.GROUPS,     block=False),
         CommandHandler(app.REPORT_COMMAND, group_report_handler, filters=ChatType.GROUPS,     block=False),
         MessageHandler(ChatType.CHANNEL & ~UpdateType.EDITED,    channel_publication_handler, block=False),
+        MessageHandler(Text(app.provider.config.i18n.download_submited) & ChatType.GROUP, group_download_submited_key_handler, block=False)
     ], group=app.UPDATE_GROUP_GROUP_REQUEST)
 
     ##
     # User handlers
     ##
+    app.add_handler(
+        ConversationHandler(
+            entry_points = [CallbackQueryHandler(qr_submit_callback_handler, pattern=UserSubmitQrCallback.PATTERN)],
+            states = {
+                UserSubmitQrCallback.STATE_SUBMIT_AWAIT: [
+                    MessageHandler(Text(app.provider.config.i18n.confirm_qr)&ChatType.PRIVATE, qr_submit_approve_handler)
+                ]
+            },
+            fallbacks = [
+                MessageHandler(Text(app.provider.config.i18n.cancel)&ChatType.PRIVATE, qr_submit_cancel_handler),
+                CommandHandler(app.HELP_COMMAND,  user_start_help_handler, filters=ChatType.PRIVATE, block=False),
+            ],
+            block=False
+        ),
+        group=app.UPDATE_GROUP_USER_REQUEST
+    )
+
     app.add_handlers([
         CommandHandler(app.START_COMMAND, user_start_help_handler, filters=ChatType.PRIVATE, block=False),
         CommandHandler(app.HELP_COMMAND,  user_start_help_handler, filters=ChatType.PRIVATE, block=False),

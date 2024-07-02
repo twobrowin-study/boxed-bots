@@ -10,6 +10,7 @@ from io import BytesIO
 from datetime import datetime
 from loguru import logger
 
+import re
 from jinja2 import Template
 
 from bot.application import BBApplication
@@ -26,7 +27,8 @@ from utils.custom_types import (
     KeyboardKeyStatusEnum,
     UserFieldDataPrepared,
     ReplyTypeEnum,
-    FieldStatusEnum
+    FieldStatusEnum,
+    QrCodeSubmitStatus,
 )
 
 from bot.helpers.promocodes import send_promocodes
@@ -44,7 +46,7 @@ from bot.helpers.fields import (
     get_user_field_value_by_key,
 )
 
-from bot.callback_constants import UserChangeFieldCallback
+from bot.callback_constants import UserChangeFieldCallback, UserSubmitQrCallback
 
 async def insert_or_update_user_field_value(
         session: AsyncSession,
@@ -161,7 +163,7 @@ async def parse_start_help_commands_and_answer(update: Update, context: ContextT
                 settings.help_user_template.format(
                     template = curr_field.question_markdown
                 ),
-                reply_markup = construct_keyboard_reply(curr_field, app)
+                reply_markup = construct_keyboard_reply(curr_field, app, cancel_key=(user.change_field_message_id is not None))
             )
             return
 
@@ -171,7 +173,7 @@ async def parse_start_help_commands_and_answer(update: Update, context: ContextT
                 settings.restart_user_template.format(
                     template = curr_field.question_markdown
                 ),
-                reply_markup = construct_keyboard_reply(curr_field, app)
+                reply_markup = construct_keyboard_reply(curr_field, app, cancel_key=(user.change_field_message_id is not None))
             )
             return
 
@@ -238,20 +240,6 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
 
     if not curr_field:
         return None
-    
-    if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket):
-        await update.message.reply_markdown(
-            curr_field.question_markdown,
-            reply_markup = construct_keyboard_reply(curr_field, app)
-        )
-        return None
-    
-    if message_type == 'photo/document' and not (curr_field.document_bucket or curr_field.image_bucket):
-        await update.message.reply_markdown(
-            curr_field.question_markdown,
-            reply_markup = construct_keyboard_reply(curr_field, app)
-        )
-        return None
 
     if update.message.text == app.provider.config.i18n.defer:
         await update.message.reply_markdown(
@@ -269,8 +257,22 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
         await session.commit()
         return
     
-    curr_reply_message: ReplyableConditionMessage = user.curr_reply_message
-    next_field = await get_next_field_question(session, curr_field)
+    if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket):
+        await update.message.reply_markdown(
+            curr_field.question_markdown,
+            reply_markup = construct_keyboard_reply(curr_field, app)
+        )
+        return None
+    
+    if message_type == 'photo/document' and not (curr_field.document_bucket or curr_field.image_bucket):
+        await update.message.reply_markdown(
+            curr_field.question_markdown,
+            reply_markup = construct_keyboard_reply(curr_field, app)
+        )
+        return None
+    
+    curr_reply_message: ReplyableConditionMessage|None = user.curr_reply_message
+    next_field = await get_next_field_question(session, curr_field) 
 
     if curr_reply_message and curr_reply_message.reply_type == ReplyTypeEnum.FULL_TEXT_ANSWER:
         logger.info((
@@ -376,6 +378,21 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         logger.error(f"Could not found field to update user {chat_id=} {username=} {user.curr_field_id=}")
         await update.message.reply_markdown(settings.error_reply)
         return True
+
+    if update.message.text == app.provider.config.i18n.cancel:
+        await update.message.reply_markdown(
+            app.provider.config.i18n.change_canceled,
+            reply_markup = await get_keyboard_of_user(session, user)
+        )
+        await session.execute(
+            sql_update(User)
+            .where(User.id == user.id)
+            .values(
+                curr_field_id = None,
+                change_field_message_id = None
+            )
+        )
+        return False
     
     if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket):
         await update.message.reply_markdown(curr_field.question_markdown)
@@ -385,15 +402,23 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         await update.message.reply_markdown(curr_field.question_markdown)
         return True
     
-    await update.message.reply_markdown(
-        settings.user_change_message_reply_template.format(state = curr_field.key),
-        reply_markup = await get_keyboard_of_user(session, user)
-    )
-
     try:
         user_field_value_data = update.message.text_markdown_urled
     except Exception:
         user_field_value_data = escape_markdown(update.message.text)
+        
+    if curr_field.validation_regexp and curr_field.validation_error_markdown:
+        validation_regexp = re.compile(curr_field.validation_regexp)
+        if validation_regexp.match(user_field_value_data) is None:
+            return await update.message.reply_markdown(curr_field.validation_error_markdown)
+        
+    if curr_field and curr_field.validation_remove_regexp:
+        user_field_value_data = re.sub(re.compile(curr_field.validation_remove_regexp), "", user_field_value_data)
+    
+    await update.message.reply_markdown(
+        settings.user_change_message_reply_template.format(state = curr_field.key),
+        reply_markup = await get_keyboard_of_user(session, user)
+    )
 
     if message_type == 'photo/document':
         user_field_value_data = await upload_telegram_file_to_minio_and_return_filename(update, context, user, curr_field, settings, session)
@@ -425,7 +450,7 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
             parse_mode   = ParseMode.MARKDOWN,
             reply_markup = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
-                    text=user_fields[field.id].value,
+                    text=f"{app.provider.config.i18n.change if not user_fields[field.id].empty else app.provider.config.i18n.append} {field.key}",
                     callback_data=UserChangeFieldCallback.TEMPLATE.format(field_id = field.id)
                 )]
                 for field in fields
@@ -454,6 +479,7 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
     bot: Bot = app.bot
     chat_id  = update.effective_user.id
     username = update.effective_user.username
+    settings = await app.provider.settings
 
     keyboard_key = await get_keyboard_key_by_key_text(session, update.message.text)
     
@@ -501,7 +527,9 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
     if keyboard_key.status == KeyboardKeyStatusEnum.NEWS:
         async with app.provider.db_session() as session:
             news_posts = await session.scalars(
-                select(NewsPost).order_by(NewsPost.id.desc()).limit(10)
+                select(NewsPost)
+                .order_by(NewsPost.id.desc())
+                .limit(int(settings.number_of_last_news_to_show))
             )
             for news_post in news_posts.all():
                 await bot.forward_message(
@@ -520,8 +548,18 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
                 .where(UserFieldValue.user_id == user.id)
                 .where(UserFieldValue.field_id == Field.id)
             )
-            if qr_code in [None, ""]:
-                await update.message.reply_markdown(settings.no_qr_code_message)
+            if qr_code in [None, ""] and user.qr_code_status == QrCodeSubmitStatus.NOT_SUBMITED:
+                await update.message.reply_markdown(
+                    settings.no_qr_code_message,
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(
+                            text = app.provider.config.i18n.submit_qr,
+                            callback_data = UserSubmitQrCallback.PATTERN
+                        )
+                    ]])
+                )
+            elif qr_code in [None, ""] and user.qr_code_status == QrCodeSubmitStatus.SUBMITED:
+                await update.message.reply_markdown(settings.qr_submitted_message)
             else:
                 await update.message.reply_photo(
                     qr_code,

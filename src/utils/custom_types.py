@@ -114,6 +114,12 @@ class PromocodeStatusEnum(Enum):
     EXPIRED  = 'expired'
     INACTIVE = 'inactive'
 
+class QrCodeSubmitStatus(Enum):
+    """Статус выдачи QR кодов"""
+    NOT_SUBMITED = 'not_submited'
+    SUBMITED     = 'submited'
+    APPROVED     = 'approved'
+
 class UserFieldDataPlain(NamedTuple):
     key:   str
     value: str

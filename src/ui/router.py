@@ -43,7 +43,8 @@ from utils.custom_types import (
     GroupStatusEnum,
     ReplyTypeEnum,
     PersonalNotificationStatusEnum,
-    PromocodeStatusEnum
+    PromocodeStatusEnum,
+    QrCodeSubmitStatus
 )
 
 from ui.ui_keycloak import UIUser
@@ -246,6 +247,14 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                         personal_notification_status = PersonalNotificationStatusEnum.TO_DELIVER
                     else:
                         personal_notification_status = PersonalNotificationStatusEnum.INACTIVE
+                    
+                    settings = await provider.settings
+                    if field.key == settings.qr_code_user_field:
+                        await session.execute(
+                            update(User)
+                            .where(User.id == user_id)
+                            .values(qr_code_status = QrCodeSubmitStatus.APPROVED)
+                        )
 
                 if not prev_field:
                     await session.execute(
@@ -415,6 +424,22 @@ async def fields(branch_id: int, request: Request) -> JSONResponse:
         if 'document_bucket' in field and 'image_bucket' in field:
             if field['document_bucket'] and field['image_bucket']:
                 logger.error("Trying to save image and document buckets at the same time")
+                return JSONResponse({'error': True}, status_code=500)
+        if 'validation_regexp' in field and 'validation_error_markdown' in field:
+            if field['validation_regexp'] and not field['validation_error_markdown']:
+                logger.error("Trying to save validation regexp without validation error markdown")
+                return JSONResponse({'error': True}, status_code=500)
+            
+            if not field['validation_regexp'] and field['validation_error_markdown']:
+                logger.error("Trying to save validation error without validation regexp markdown")
+                return JSONResponse({'error': True}, status_code=500)
+            
+            if 'document_bucket' in field and field['document_bucket']:
+                logger.error("Trying to save document buckets with regexp at the same time")
+                return JSONResponse({'error': True}, status_code=500)
+            
+            if 'image_bucket' in field and field['image_bucket']:
+                logger.error("Trying to save image buckets with regexp at the same time")
                 return JSONResponse({'error': True}, status_code=500)
 
     return await try_to_save_attrs(Field, fields_attrs)

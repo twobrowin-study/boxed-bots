@@ -26,22 +26,24 @@ from bot.callback_constants import (
     UserFastAnswerReplyCallback
 )
 
-def construct_keyboard_reply(field: Field, app: BBApplication, deferable_key: bool = True) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
+def construct_keyboard_reply(field: Field, app: BBApplication, deferable_key: bool = True, cancel_key: bool = False) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
     """
     Получить клавиатуру по строке вариантов ответов
     """
     branch: FieldBranch = field.branch
-    if field.answer_options in [None, ''] and not branch.is_deferrable:
-        return ReplyKeyboardRemove()
-    if field.answer_options in [None, ''] and branch.is_deferrable:
-        return ReplyKeyboardMarkup([
-            [app.provider.config.i18n.defer] if branch.is_deferrable and deferable_key else []
-        ])
+
+    bottom_buttons = [
+        [app.provider.config.i18n.defer] if branch.is_deferrable and deferable_key else [],
+        [app.provider.config.i18n.skip] if field.is_skippable and not cancel_key else [],
+        [app.provider.config.i18n.cancel] if cancel_key else []
+    ]
+
+    if field.answer_options in [None, '']:
+        return ReplyKeyboardMarkup(bottom_buttons)
+
     return ReplyKeyboardMarkup([
         [key] for key in field.answer_options.split('\n')
-    ] + [
-        [app.provider.config.i18n.defer] if branch.is_deferrable and deferable_key else []
-    ])
+    ] + bottom_buttons)
 
 async def get_keyboard_of_user(
         session: AsyncSession, user: User,

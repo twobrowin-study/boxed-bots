@@ -70,13 +70,18 @@ class Defaults(BaseModel, extra="forbid"):
     report_send_every_x_active_users:       DefaultValue
     report_currently_active_users_template: DefaultValue
 
-    qr_code_user_field: DefaultValue
-    qr_code_message:    DefaultValue
-    no_qr_code_message: DefaultValue
+    qr_code_user_field:  DefaultValue
+    qr_code_message:     DefaultValue
+    no_qr_code_message:  DefaultValue
+    qr_submit_message:   DefaultValue
+    qr_submitted_message: DefaultValue
+    qr_submited_superadmin_j2_template: DefaultValue
 
     personal_notification_jinja_template: DefaultValue
     expired_promocodes_jinja_template:    DefaultValue
     avaliable_promocodes_jinja_template:  DefaultValue
+
+    number_of_last_news_to_show: DefaultValue
 
     def model_dump_anythig(self, what_to_dump: str) -> dict[str, str]:
         full_dump: dict[str, dict[str, str]] = self.model_dump()
@@ -259,6 +264,27 @@ class I18n(BaseModel, extra="forbid"):
     value:       str
     description: str
     expire_at:   str
+
+    validation_regexp:         str
+    validation_error_markdown: str
+    validation_remove_regexp:  str
+    is_skippable:              str
+
+    cancel: str
+    skip:   str
+    change_canceled: str
+
+    submit_qr:   str
+    confirm_qr:  str
+    qr_canceled: str
+
+    download_submited: str
+    send_approved:     str
+    submitted_empty:   str
+
+    send_approved_to_send:  str
+    send_approved_canceled: str
+    send_approved_done:     str
 
 class ConfigYaml(BaseSettings):
     """

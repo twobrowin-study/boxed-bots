@@ -200,6 +200,21 @@ no_qr_code_message:
   description: Сообщение, посылаемое если пользователю не выдан QR код
   value: Вам ещё не выдан QR-код, Вам следует пройти офлайн регистрацию с ПАСПОРТОМ по адресу 2-я Бауманская улица 5с12
 
+qr_submit_message:
+  description: Сообщение высылаемое пользователю при начале отправки заявки на QR код
+  value: Пожалуйста, подтвердите, что Вы согласны отправить заявку на получение QR кода
+
+qr_submitted_message:
+  description: Сообщение высылаемое пользователю после подтверждения отправки заявки на QR код
+  value: Ваша заявка отправлена, после обработки Вам будет выслано уведомление
+
+qr_submited_superadmin_j2_template:
+  description: Шаблон сообщения, отправляемого суперадминистраторам при отправке пользователем заявки на qr код
+  value: |-
+    Получена новая заявка на получение QR кода
+
+    *ФИО*: `{% if 1 in fields %}{{ fields[1].value }}{% endif %}`
+
 personal_notification_jinja_template:
   description: Шаблон сообщения, высылаемого как персональное уведомление для пользователя
   value: |-
@@ -231,3 +246,7 @@ avaliable_promocodes_jinja_template:
     {%- endif %}
     {% if promocode.description %}{{ promocode.description }}{% endif %}
     {%- endfor -%}
+  
+number_of_last_news_to_show:
+  description: Количество последних показываемых новостей
+  value: "5"

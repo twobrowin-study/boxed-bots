@@ -26,9 +26,13 @@
         <th id="fields-order_place"      >{{ i18n.order_place }}</th>
         <th id="fields-branch_id"        >{{ i18n.branch_id }}</th>
         <th id="fields-question_markdown">{{ i18n.question_markdown }}</th>
+        <th id="fields-validation_regexp">{{ i18n.validation_regexp }}</th>
+        <th id="fields-validation_error_markdown">{{ i18n.validation_error_markdown }}</th>
+        <th id="fields-validation_remove_regexp">{{ i18n.validation_remove_regexp }}</th>
         <th id="fields-answer_options"   >{{ i18n.answer_options }}</th>
         <th id="fields-image_bucket"     >{{ i18n.image_bucket }}</th>
         <th id="fields-document_bucket"  >{{ i18n.document_bucket }}</th>
+        <th id="fields-is_skippable"     >{{ i18n.is_skippable }}</th>
         <th id="fields-is_boolean"       >{{ i18n.is_boolean }}</th>
         <th id="fields-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
@@ -62,9 +66,18 @@
             </select>
           </td>
           <td id="fields-{{ field.id }}-question_markdown" class="row-editable" style="white-space: pre-line">{% if field.question_markdown %}{{ field.question_markdown }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-validation_regexp" class="row-editable" style="white-space: pre-line">{% if field.validation_regexp %}{{ field.validation_regexp }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-validation_error_markdown" class="row-editable" style="white-space: pre-line">{% if field.validation_error_markdown %}{{ field.validation_error_markdown }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-validation_remove_regexp"  class="row-editable" style="white-space: pre-line">{% if field.validation_remove_regexp %}{{ field.validation_remove_regexp }}{% endif %}</td>
           <td id="fields-{{ field.id }}-answer_options"    class="row-editable" style="white-space: pre-line">{% if field.answer_options %}{{ field.answer_options }}{% endif %}</td>
           <td id="fields-{{ field.id }}-image_bucket"      class="row-editable" style="white-space: pre-line">{% if field.image_bucket %}{{ field.image_bucket }}{% endif %}</td>
           <td id="fields-{{ field.id }}-document_bucket"   class="row-editable" style="white-space: pre-line">{% if field.document_bucket %}{{ field.document_bucket }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-is_skippable" class="row-editable">
+            <select id="fields-{{ field.id }}-is_skippable-bool_value" class="form-select" disabled>
+                <option value="false" {% if not field.is_skippable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     field.is_skippable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+            </select>
+          </td>
           <td id="fields-{{ field.id }}-is_boolean" class="row-editable">
             <select id="fields-{{ field.id }}-is_boolean-bool_value" class="form-select" disabled>
                 <option value="false" {% if not field.is_boolean %}selected='true'{% endif %}>{{ i18n.no  }}</option>
@@ -96,9 +109,18 @@
           </select>
         </td>
         <td id="fields-new-question_markdown" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-validation_regexp" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-validation_error_markdown" class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-validation_remove_regexp"  class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-answer_options"    class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-image_bucket"      class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-document_bucket"   class="row-editable table-info" contenteditable="true"></td>
+        <td id="fields-new-is_skippable" class="row-editable table-info">
+          <select id="fields-new-is_skippable-bool_value" class="form-select">
+              <option value="false">{{ i18n.no  }}</option>
+              <option value="true" >{{ i18n.yes }}</option>
+          </select>
+        </td>
         <td id="fields-new-is_boolean" class="row-editable table-info">
           <select id="fields-new-is_boolean-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>

@@ -1,16 +1,20 @@
-from telegram import Update
-from telegram.ext import ContextTypes
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ContextTypes, ConversationHandler
 from telegram.helpers import escape_markdown
+from telegram.constants import ParseMode
 
 from sqlalchemy import select, update as sql_udate
 
+import re
 from loguru import logger
+from jinja2 import Template
 
 from utils.db_model import (
     User, Field,
     FieldBranch,
     ReplyableConditionMessage
 )
+from utils.custom_types import QrCodeSubmitStatus
 
 from bot.application import BBApplication
 
@@ -34,10 +38,13 @@ from bot.callback_constants import (
     UserChangeFieldCallback,
     UserStartBranchReplyCallback,
     UserFullTextAnswerReplyCallback,
-    UserFastAnswerReplyCallback
+    UserFastAnswerReplyCallback,
+    UserSubmitQrCallback
 )
 
-async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+from bot.handlers.group import group_send_to_all_superadmin_tasked
+
+async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Обработчик команд старта или помощи пользователя
     """
@@ -52,13 +59,16 @@ async def user_start_help_handler(update: Update, context: ContextTypes.DEFAULT_
 
         if not user and bot_status.is_registration_open == False:
             logger.warning(f"Got start/help command from new user {chat_id=} and {username=}, but registration is complete")
-            return await update.message.reply_markdown(settings.registration_is_over)
+            await update.message.reply_markdown(settings.registration_is_over)
+            return ConversationHandler.END
         
         if not user:
             await create_new_user_and_answer(update, context, settings, session)
-            return await session.commit()
+            await session.commit()
+            return ConversationHandler.END
         
-        return await parse_start_help_commands_and_answer(update, context, user, settings, session)
+        await parse_start_help_commands_and_answer(update, context, user, settings, session)
+        return ConversationHandler.END
 
 async def user_message_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -72,6 +82,7 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
     async with app.provider.db_session() as session:
         user     = await get_user_by_chat_id_or_none(session, chat_id)
         settings = await app.provider.get_settings(session)
+        curr_field: Field|None = user.curr_field
 
         if not user:
             logger.warning(f"Got {message_type} message from unknown user {chat_id=} and {username=}... strange error")
@@ -87,9 +98,17 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
             field_value = update.message.text_markdown_urled
         except Exception:
             field_value = escape_markdown(update.message.text)
+        
+        if curr_field and curr_field.validation_regexp and curr_field.validation_error_markdown:
+            validation_regexp = re.compile(curr_field.validation_regexp)
+            if validation_regexp.match(field_value) is None:
+                return await update.message.reply_markdown(curr_field.validation_error_markdown)
+        
+        if curr_field and curr_field.validation_remove_regexp:
+            field_value = re.sub(re.compile(curr_field.validation_remove_regexp), "", field_value)
 
         user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
-        if user_curr_field:
+        if user_curr_field and update.message.text != app.provider.config.i18n.skip:
             await insert_or_update_user_field_value(
                 session    = session,
                 user_id    = user.id,
@@ -97,6 +116,8 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
                 value      = field_value,
                 message_id = update.message.id
             )
+            return await session.commit()
+        elif update.message.text == app.provider.config.i18n.skip:
             return await session.commit()
 
         keyboard_key = await answer_to_user_keyboard_key_hit(update, context, user, session)
@@ -134,18 +155,18 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
             return await session.commit()
         
         user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
-        if user_curr_field:
-            
+        if user_curr_field and update.message.text != app.provider.config.i18n.skip:
             full_filename = await upload_telegram_file_to_minio_and_return_filename(update, context, user, user_curr_field, settings, session)
-
             await insert_or_update_user_field_value(
                 session    = session, 
                 user_id    = user.id,
                 field_id   = user_curr_field.id,
                 value      = full_filename,
                 message_id = update.message.id
-            )
-            
+            )    
+            return await session.commit()
+        
+        elif update.message.text == app.provider.config.i18n.skip:
             return await session.commit()
         
         logger.warning(f"Got unknown message from user {chat_id=} and {username=}")
@@ -181,7 +202,7 @@ async def user_change_state_callback(update: Update, context: ContextTypes.DEFAU
         
         await update.effective_message.reply_markdown(
             text = changing_field.question_markdown,
-            reply_markup = construct_keyboard_reply(changing_field, app, deferable_key=False)
+            reply_markup = construct_keyboard_reply(changing_field, app, deferable_key=False, cancel_key=True)
         )
 
         await session.execute(
@@ -339,3 +360,56 @@ async def fast_answer_callback_handler(update: Update, context: ContextTypes.DEF
         )
 
         await session.commit()
+
+async def qr_submit_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка нажатия на кнопку отправки заявки на получение qr кода"""
+    app: BBApplication = context.application
+    settings = await app.provider.settings
+    await update.callback_query.answer()
+    await update.effective_message.reply_markdown(
+        settings.qr_submit_message,
+        reply_markup = ReplyKeyboardMarkup([
+            [ app.provider.config.i18n.confirm_qr ],
+            [ app.provider.config.i18n.cancel     ]
+        ])
+    )
+    return UserSubmitQrCallback.STATE_SUBMIT_AWAIT
+
+async def qr_submit_approve_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка нажатия на кнопку с подтверждения отправки заявки"""
+    app: BBApplication = context.application
+    settings = await app.provider.settings
+    chat_id  = update.effective_user.id
+    async with app.provider.db_session() as session:
+        user = await get_user_by_chat_id_or_none(session, chat_id)
+        await update.effective_message.reply_markdown(
+            settings.qr_submitted_message,
+            reply_markup = await get_keyboard_of_user(session, user)
+        )
+        await session.execute(
+            sql_udate(User)
+            .where(User.id == user.id)
+            .values(qr_code_status = QrCodeSubmitStatus.SUBMITED)
+        )
+        await group_send_to_all_superadmin_tasked(
+            app, Template(settings.qr_submited_superadmin_j2_template).render(fields = user.prepare_fields()),
+            parse_mode = ParseMode.MARKDOWN,
+            reply_markup = ReplyKeyboardMarkup([
+                [app.provider.config.i18n.download_submited],
+                [app.provider.config.i18n.send_approved],
+            ])
+        )        
+        await session.commit()
+    return ConversationHandler.END
+
+async def qr_submit_cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка нажатия на кнопку с отменой от отправки заявки"""
+    app: BBApplication = context.application
+    chat_id  = update.effective_user.id
+    async with app.provider.db_session() as session:
+        user = await get_user_by_chat_id_or_none(session, chat_id)
+        await update.effective_message.reply_markdown(
+            app.provider.config.i18n.qr_canceled,
+            reply_markup = await get_keyboard_of_user(session, user)
+        )
+    return ConversationHandler.END

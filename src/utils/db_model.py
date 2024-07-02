@@ -25,7 +25,8 @@ from utils.custom_types import (
     UserFieldDataPrepared,
     UserDataPrepared,
     PersonalNotificationStatusEnum,
-    PromocodeStatusEnum
+    PromocodeStatusEnum,
+    QrCodeSubmitStatus
 )
 from utils.config_model import I18n
 
@@ -95,6 +96,12 @@ class Field(Base):
     image_bucket:      Mapped[str|None] = mapped_column(default=None)
     document_bucket:   Mapped[str|None] = mapped_column(default=None)
     is_boolean:        Mapped[bool]     = mapped_column(default=False)
+
+    validation_regexp: Mapped[str|None] = mapped_column(default=None)
+    validation_error_markdown: Mapped[str|None] = mapped_column(default=None)
+    validation_remove_regexp: Mapped[str|None] = mapped_column(default=None)
+
+    is_skippable: Mapped[bool] = mapped_column(default=False)
 
 class ReplyableConditionMessage(Base):
     """
@@ -187,7 +194,7 @@ class User(Base):
 
     fields_values = relationship('UserFieldValue', backref='user', lazy='selectin')
 
-    change_field_message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
+    change_field_message_id: Mapped[int|None] = mapped_column(nullable=True, default=None, type_=BigInteger)
     deferred_field_id: Column[int|None] = Column(Integer, ForeignKey(Field.id), nullable=True)
     """Id отложенного пользователем поля"""
     deferred_field = relationship('Field', lazy='selectin', foreign_keys=deferred_field_id)
@@ -200,6 +207,9 @@ class User(Base):
 
     curr_keyboard_key_parent_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
     """Id родительской кнопки последней клавиши, на которую нажал пользователь"""
+
+    qr_code_status: Mapped[QrCodeSubmitStatus] = mapped_column(default=QrCodeSubmitStatus.NOT_SUBMITED)
+    """Статус обработки QR кода"""
 
     def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None) -> dict[str, str]:
         """
@@ -377,6 +387,12 @@ class Settings(Base):
     """Сообщение, посылаемое вместе с QR кодом пользователя"""
     no_qr_code_message: Mapped[str] = mapped_column()
     """Сообщение, посылаемое если пользователю не выдан QR код"""
+    qr_submit_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю при начале отправки заявки на QR код"""
+    qr_submitted_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю после подтверждения отправки заявки на QR код"""
+    qr_submited_superadmin_j2_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения, отправляемого суперадминистраторам при отправке пользователем заявки на qr код"""
 
     personal_notification_jinja_template: Mapped[str] = mapped_column()
     """Шаблон сообщения, высылаемого как персональное уведомление для пользователя"""
@@ -384,6 +400,9 @@ class Settings(Base):
     """Шаблон сообщения о просроченных промокодах"""
     avaliable_promocodes_jinja_template: Mapped[str] = mapped_column()
     """Шаблон сообщения о доступных промокодах"""
+
+    number_of_last_news_to_show: Mapped[str] = mapped_column()
+    """Количество последних показываемых новостей"""
 
 class NewsPost(Base):
     """Класс новостных сообщений"""
