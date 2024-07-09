@@ -70,10 +70,11 @@ class Defaults(BaseModel, extra="forbid"):
     report_send_every_x_active_users:       DefaultValue
     report_currently_active_users_template: DefaultValue
 
-    qr_code_user_field:  DefaultValue
-    qr_code_message:     DefaultValue
-    no_qr_code_message:  DefaultValue
-    qr_submit_message:   DefaultValue
+    qr_code_user_field:   DefaultValue
+    qr_code_message:      DefaultValue
+    qr_hint_message:      DefaultValue
+    no_qr_code_message:   DefaultValue
+    qr_submit_message:    DefaultValue
     qr_submitted_message: DefaultValue
     qr_submited_superadmin_j2_template: DefaultValue
 
@@ -274,6 +275,7 @@ class I18n(BaseModel, extra="forbid"):
     skip:   str
     change_canceled: str
 
+    help_qr:     str
     submit_qr:   str
     confirm_qr:  str
     qr_canceled: str

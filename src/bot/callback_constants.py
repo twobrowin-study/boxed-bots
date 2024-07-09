@@ -45,6 +45,10 @@ class UserSubmitQrCallback:
     PATTERN = 'submit_qr'
     STATE_SUBMIT_AWAIT = 1
 
+class UserHelpQrCallback:
+    """Тип данных для регистрации кнопки получения помощи с qr кодом"""
+    PATTERN = 'qr_help'
+
 class GroupApproveQrConversation:
     """Тип данных для регистрации статусов выгрузки таблицы пользователей с подтверждёнными qr кодами"""
     XLSX_AWAIT = 1

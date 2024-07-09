@@ -43,6 +43,7 @@ from bot.handlers.user import (
     qr_submit_callback_handler,
     qr_submit_approve_handler,
     qr_submit_cancel_handler,
+    qr_help_callback_handler,
 )
 
 from bot.handlers.notification import notify_job
@@ -54,6 +55,7 @@ from bot.callback_constants import (
     UserFastAnswerReplyCallback,
     UserSubmitQrCallback,
     GroupApproveQrConversation,
+    UserHelpQrCallback,
 )
 
 def map_service_mode_handlers(app: BBApplication) -> None:
@@ -143,6 +145,7 @@ def map_default_handlers(app: BBApplication) -> None:
         CallbackQueryHandler(branch_start_callback_handler, pattern=UserStartBranchReplyCallback.PATTERN,    block=False),
         CallbackQueryHandler(full_text_callback_handler,    pattern=UserFullTextAnswerReplyCallback.PATTERN, block=False),
         CallbackQueryHandler(fast_answer_callback_handler,  pattern=UserFastAnswerReplyCallback.PATTERN,     block=False),
+        CallbackQueryHandler(qr_help_callback_handler,      pattern=UserHelpQrCallback.PATTERN,              block=False)
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
     app.job_queue.run_once(notify_job, when=1)

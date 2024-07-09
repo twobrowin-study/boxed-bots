@@ -165,7 +165,6 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                 message_id = update.message.id
             )    
             return await session.commit()
-        
         elif update.message.text == app.provider.config.i18n.skip:
             return await session.commit()
         
@@ -413,3 +412,10 @@ async def qr_submit_cancel_handler(update: Update, context: ContextTypes.DEFAULT
             reply_markup = await get_keyboard_of_user(session, user)
         )
     return ConversationHandler.END
+
+async def qr_help_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработка нажатия на кнопку помощи с QR кодом"""
+    app: BBApplication = context.application
+    settings = await app.provider.settings
+    await update.callback_query.answer()
+    await update.effective_message.reply_markdown(settings.qr_hint_message)

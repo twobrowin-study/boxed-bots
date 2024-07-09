@@ -46,7 +46,7 @@ from bot.helpers.fields import (
     get_user_field_value_by_key,
 )
 
-from bot.callback_constants import UserChangeFieldCallback, UserSubmitQrCallback
+from bot.callback_constants import UserChangeFieldCallback, UserSubmitQrCallback, UserHelpQrCallback
 
 async def insert_or_update_user_field_value(
         session: AsyncSession,
@@ -257,11 +257,16 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
         await session.commit()
         return
     
-    if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket):
+    if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket) and update.effective_message.text != app.provider.config.i18n.skip:
         await update.message.reply_markdown(
             curr_field.question_markdown,
             reply_markup = construct_keyboard_reply(curr_field, app)
         )
+        logger.info((
+            f"Got {message_type} answer from user {chat_id=} and {username=} "
+            f"to question {curr_field.key=} with {curr_field.status=}, "
+            f"but it was photo/document message and not skip button"
+        ))
         return None
     
     if message_type == 'photo/document' and not (curr_field.document_bucket or curr_field.image_bucket):
@@ -269,6 +274,11 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
             curr_field.question_markdown,
             reply_markup = construct_keyboard_reply(curr_field, app)
         )
+        logger.info((
+            f"Got {message_type} answer from user {chat_id=} and {username=} "
+            f"to question {curr_field.key=} with {curr_field.status=}, "
+            f"but it was text message and not skip button"
+        ))
         return None
     
     curr_reply_message: ReplyableConditionMessage|None = user.curr_reply_message
@@ -531,7 +541,7 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
                 .order_by(NewsPost.id.desc())
                 .limit(int(settings.number_of_last_news_to_show))
             )
-            for news_post in news_posts.all():
+            for news_post in reversed(news_posts.all()):
                 await bot.forward_message(
                     chat_id=chat_id,
                     from_chat_id=news_post.chat_id,
@@ -564,7 +574,13 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
                 await update.message.reply_photo(
                     qr_code,
                     caption=settings.qr_code_message,
-                    parse_mode=ParseMode.MARKDOWN
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(
+                            text = app.provider.config.i18n.help_qr,
+                            callback_data = UserHelpQrCallback.PATTERN
+                        )
+                    ]])
                 )
         return keyboard_key
     

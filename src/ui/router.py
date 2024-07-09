@@ -434,13 +434,14 @@ async def fields(branch_id: int, request: Request) -> JSONResponse:
                 logger.error("Trying to save validation error without validation regexp markdown")
                 return JSONResponse({'error': True}, status_code=500)
             
-            if 'document_bucket' in field and field['document_bucket']:
-                logger.error("Trying to save document buckets with regexp at the same time")
-                return JSONResponse({'error': True}, status_code=500)
-            
-            if 'image_bucket' in field and field['image_bucket']:
-                logger.error("Trying to save image buckets with regexp at the same time")
-                return JSONResponse({'error': True}, status_code=500)
+            if field['validation_regexp'] and field['validation_error_markdown']:
+                if 'document_bucket' in field and field['document_bucket']:
+                    logger.error("Trying to save document buckets with regexp at the same time")
+                    return JSONResponse({'error': True}, status_code=500)
+                
+                if 'image_bucket' in field and field['image_bucket']:
+                    logger.error("Trying to save image buckets with regexp at the same time")
+                    return JSONResponse({'error': True}, status_code=500)
 
     return await try_to_save_attrs(Field, fields_attrs)
 

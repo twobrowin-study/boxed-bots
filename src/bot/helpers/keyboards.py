@@ -32,14 +32,18 @@ def construct_keyboard_reply(field: Field, app: BBApplication, deferable_key: bo
     """
     branch: FieldBranch = field.branch
 
-    bottom_buttons = [
-        [app.provider.config.i18n.defer] if branch.is_deferrable and deferable_key else [],
-        [app.provider.config.i18n.skip] if field.is_skippable and not cancel_key else [],
-        [app.provider.config.i18n.cancel] if cancel_key else []
-    ]
+    bottom_buttons = []
+    if branch.is_deferrable and deferable_key:
+        bottom_buttons.append([app.provider.config.i18n.defer])
+    if field.is_skippable and not cancel_key:
+        bottom_buttons.append([app.provider.config.i18n.skip])
+    if cancel_key:
+        bottom_buttons.append([app.provider.config.i18n.cancel])
 
-    if field.answer_options in [None, '']:
+    if field.answer_options in [None, ''] and bottom_buttons:
         return ReplyKeyboardMarkup(bottom_buttons)
+    elif not bottom_buttons:
+        return ReplyKeyboardRemove()
 
     return ReplyKeyboardMarkup([
         [key] for key in field.answer_options.split('\n')

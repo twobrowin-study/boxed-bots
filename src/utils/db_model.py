@@ -385,6 +385,8 @@ class Settings(Base):
     """Название ветки и пользовательского поля, содержащего QR коды"""
     qr_code_message: Mapped[str] = mapped_column()
     """Сообщение, посылаемое вместе с QR кодом пользователя"""
+    qr_hint_message: Mapped[str] = mapped_column()
+    """Сообщение помощи пользователю о регаистрации qr кода"""
     no_qr_code_message: Mapped[str] = mapped_column()
     """Сообщение, посылаемое если пользователю не выдан QR код"""
     qr_submit_message: Mapped[str] = mapped_column()

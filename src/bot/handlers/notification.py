@@ -196,7 +196,7 @@ async def notify_job(context: CallbackContext) -> None:
                     app.create_task(
                         bot.send_photo(
                             user.chat_id, uf_personal_notification.value,
-                            caption=settings.qr_code_message,
+                            caption=f"{settings.qr_code_message}\n\n{settings.qr_hint_message}",
                             parse_mode=ParseMode.MARKDOWN
                         ),
                         update={
