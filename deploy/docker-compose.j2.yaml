@@ -9,7 +9,7 @@ x-logging:
 
 services:
   {{ secrets.bot.id }}:
-    image: twobrowin/bmstu-alumni-bot:1.1.0
+    image: twobrowin/bmstu-alumni-bot:1.1.1
     logging: *default-logging
     ports:
       - target:    5432
