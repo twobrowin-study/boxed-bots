@@ -57,7 +57,7 @@ async def notify_job(context: CallbackContext) -> None:
             logger.info(f"Planned notification {planned_notification.id=} and performing notification to admins")
 
             reply_message: ReplyableConditionMessage = planned_notification.reply_condition_message
-            condition_bool_field: Field = reply_message.condition_bool_field
+            condition_bool_field: Field|None = reply_message.condition_bool_field
 
             if not condition_bool_field:
                 message = settings.notification_planned_admin_groups_template.format(
@@ -101,7 +101,7 @@ async def notify_job(context: CallbackContext) -> None:
             logger.info(f"Performing notification {notification_to_perform.id=} and performing notification to admins")
 
             reply_message: ReplyableConditionMessage = notification_to_perform.reply_condition_message
-            condition_bool_field: Field = reply_message.condition_bool_field
+            condition_bool_field: Field|None = reply_message.condition_bool_field
 
             if not condition_bool_field:
                 message = settings.notification_admin_groups_template.format(
@@ -176,12 +176,12 @@ async def notify_job(context: CallbackContext) -> None:
                 .values(personal_notification_status = PersonalNotificationStatusEnum.DELIVERED)
             )
 
-            if field.key == settings.qr_code_user_field:
-                qr_code = uf_personal_notification.value
-                if qr_code in ['', None]:
+            if field.key == settings.pass_user_field:
+                pass_value = uf_personal_notification.value
+                if pass_value in ['', None]:
                     app.create_task(
                         bot.send_message(
-                            user.chat_id, settings.no_qr_code_message,
+                            user.chat_id, settings.pass_removed_message,
                             parse_mode=ParseMode.MARKDOWN
                         ),
                         update={
@@ -189,14 +189,19 @@ async def notify_job(context: CallbackContext) -> None:
                             'chat_id': user.chat_id,
                             'field_id': field.id,
                             'uf_personal_notification_id':  uf_personal_notification.id,
-                            'type': 'no_qr'
+                            'type': 'no_pass'
                         }
                     )
                 else:
+                    pass_photo = uf_personal_notification.value
+                    if field.image_bucket and not uf_personal_notification.value_file_id:
+                        pass_photo, _ = await app.provider.minio.download(field.image_bucket, uf_personal_notification.value)
+                    elif field.image_bucket and uf_personal_notification.value_file_id:
+                        pass_photo = uf_personal_notification.value_file_id
                     app.create_task(
                         bot.send_photo(
-                            user.chat_id, uf_personal_notification.value,
-                            caption=f"{settings.qr_code_message}\n\n{settings.qr_hint_message}",
+                            user.chat_id, pass_photo,
+                            caption=settings.pass_message,
                             parse_mode=ParseMode.MARKDOWN
                         ),
                         update={
@@ -204,10 +209,10 @@ async def notify_job(context: CallbackContext) -> None:
                             'chat_id': user.chat_id,
                             'field_id': field.id,
                             'uf_personal_notification_id':  uf_personal_notification.id,
-                            'type': 'qr'
+                            'type': 'pass'
                         }
                     )
-                logger.info(f"Performed QR personal notification to user {user.id=} of field {field.id}")
+                logger.info(f"Performed pass personal notification to user {user.id=} of field {field.id}")
                 continue
             
             app.create_task(

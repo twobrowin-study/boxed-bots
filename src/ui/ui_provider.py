@@ -144,31 +144,38 @@ class UIProvider(BBProvider):
             
             settings = await self.settings 
 
-            field_branch_new = await session.execute(
+            first_field_branch = await session.execute(
                 insert(FieldBranch).values(
                     key    = settings.first_field_branch,
                     status = FieldBranchStatusEnum.NORMAL,
                     is_ui_editable  = False,
                     is_bot_editable = True,
-                    is_deferrable    = False,
+                    is_deferrable   = False,
                 )
             )
 
-            field_branch_new_id: int = field_branch_new.inserted_primary_key.t[0]
+            first_field_branch_id: int = first_field_branch.inserted_primary_key.t[0]
 
             await session.execute(
                 insert(Field).values(
                     key    = settings.user_document_name_field,
                     status = FieldStatusEnum.NORMAL,
                     order_place = 0,
-                    branch_id   = field_branch_new_id,
+                    branch_id   = first_field_branch_id,
                     question_markdown = settings.user_document_name_field
+                ).values(
+                    key    = settings.user_field_to_request_pass,
+                    status = FieldStatusEnum.NORMAL,
+                    order_place = 1,
+                    branch_id   = first_field_branch_id,
+                    question_markdown = settings.user_field_to_request_pass,
+                    is_skippable = True
                 )
             )
 
-            qr_field_branch = await session.execute(
+            pass_branch = await session.execute(
                 insert(FieldBranch).values(
-                    key    = settings.qr_code_user_field,
+                    key    = settings.pass_user_field,
                     status = FieldBranchStatusEnum.NORMAL,
                     is_ui_editable  = True,
                     is_bot_editable = False,
@@ -176,14 +183,14 @@ class UIProvider(BBProvider):
                 )
             )
 
-            qr_field_branch_id: int = qr_field_branch.inserted_primary_key.t[0]
+            pass_branch_id: int = pass_branch.inserted_primary_key.t[0]
 
             await session.execute(
                 insert(Field).values(
-                    key    = settings.qr_code_user_field,
+                    key    = settings.pass_user_field,
                     status = FieldStatusEnum.PERSONAL_NOTIFICATION,
                     order_place = 0,
-                    branch_id   = qr_field_branch_id
+                    branch_id   = pass_branch_id
                 )
             )
 

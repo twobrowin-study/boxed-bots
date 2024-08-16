@@ -88,8 +88,8 @@ class KeyboardKeyStatusEnum(Enum):
     ME_CHANGE = 'me_change'
     """Изменение параметров регистрации"""
     
-    QR = 'qr'
-    """Показать QR код пользователя"""
+    PASS = 'pass'
+    """Показать пропуск пользователя"""
 
     NEWS = 'news'
     """Отобразить новости сообщества"""
@@ -114,7 +114,7 @@ class PromocodeStatusEnum(Enum):
     EXPIRED  = 'expired'
     INACTIVE = 'inactive'
 
-class QrCodeSubmitStatus(Enum):
+class PassSubmitStatus(Enum):
     """Статус выдачи QR кодов"""
     NOT_SUBMITED = 'not_submited'
     SUBMITED     = 'submited'

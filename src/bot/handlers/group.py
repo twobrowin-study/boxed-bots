@@ -6,18 +6,21 @@ from telegram import (
 )
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
+from telegram.helpers import escape_markdown
 
 from sqlalchemy import select, insert, update as sql_update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 import io
+import zipfile
+import filetype
 from loguru import logger
 import pandas as pd
 from datetime import datetime
 from xlsxwriter.worksheet import Worksheet
 
 from utils.db_model import Group, NewsPost, User, Field, UserFieldValue
-from utils.custom_types import GroupStatusEnum, QrCodeSubmitStatus, PersonalNotificationStatusEnum
+from utils.custom_types import GroupStatusEnum, PassSubmitStatus, PersonalNotificationStatusEnum
 
 from bot.application import BBApplication
 from bot.helpers.send_to_all import (
@@ -25,7 +28,7 @@ from bot.helpers.send_to_all import (
     send_to_all_coroutines_tasked
 )
 
-from bot.callback_constants import GroupApproveQrConversation
+from bot.callback_constants import GroupApprovePassesConversation
 
 async def group_send_to_all_superadmin_awaited(app: BBApplication, message: str, parse_mode: ParseMode) -> None:
     """
@@ -172,14 +175,22 @@ async def channel_publication_handler(update: Update, context: ContextTypes.DEFA
     if update.effective_message.text == None and update.effective_message.caption == None:
         return logger.warning(f"Got publication from group {chat_id=} and {group_name=} as {group.status=} without text, so it is propably is on of previuos post photo... ignoring")
     
-    logger.info(f"Got publication from group {chat_id=} and {group_name=} as {group.status=}")
-    
+    text = ""
+    if update.effective_message.text:
+        text = update.effective_message.text
+    if update.effective_message.caption:
+        text = update.effective_message.caption
+    tags = " ".join(filter(lambda s: s.startswith('#'), text.split()))
+
+    logger.info(f"Got publication from group {chat_id=} and {group_name=} as {group.status=} with tags {tags=}")
+
     message_id = update.effective_message.id
     async with app.provider.db_session() as session:
         await session.execute(
             insert(NewsPost).values(
                 chat_id = chat_id,
-                message_id = message_id
+                message_id = message_id,
+                tags = tags
             )
         )
         await session.commit()
@@ -198,7 +209,7 @@ async def group_download_submited_key_handler(update: Update, context: ContextTy
     async with app.provider.db_session() as session:
         users_selected = await session.execute(
             select(User)
-            .where(User.qr_code_status == QrCodeSubmitStatus.SUBMITED)
+            .where(User.pass_status == PassSubmitStatus.SUBMITED)
             .order_by(User.id.asc())
         )
         users_df = pd.DataFrame([
@@ -211,7 +222,7 @@ async def group_download_submited_key_handler(update: Update, context: ContextTy
         if users_df.empty:
             return await update.effective_message.reply_markdown(app.provider.config.i18n.submitted_empty)
         
-        filename = f"{datetime.now().strftime('%Y_%m_%d__%H_%M_%S')}__submitted_qr_codes_report.xlsx"
+        filename = f"{datetime.now().strftime('%Y_%m_%d__%H_%M_%S')}__submitted_pass_report.xlsx"
 
         sheet_name = app.provider.config.i18n.download_users_report
         
@@ -236,7 +247,7 @@ async def group_download_submited_key_handler(update: Update, context: ContextTy
         report_bio.seek(0)
         await update.effective_message.reply_document(report_bio, filename=filename)
 
-async def group_upload_aproved_qr_xlsx_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def group_upload_aproved_passes_xlsx_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик нажатия на кнопку старта отправки """
     app: BBApplication = context.application
     chat_id    = update.effective_chat.id
@@ -248,16 +259,16 @@ async def group_upload_aproved_qr_xlsx_start_handler(update: Update, context: Co
         return ConversationHandler.END
     
     await update.effective_message.reply_markdown(
-        app.provider.config.i18n.send_approved_to_send,
+        app.provider.config.i18n.send_approved_zip_photos,
         reply_markup=ReplyKeyboardMarkup([
             [app.provider.config.i18n.cancel],
         ])
     )
     
-    return GroupApproveQrConversation.XLSX_AWAIT
+    return GroupApprovePassesConversation.ZIP_AWAIT
 
-async def group_upload_aproved_qr_xlsx_cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обработчик нажатия на кнопку старта отправки """
+async def group_upload_aproved_passes_xlsx_cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработчик нажатия на кнопку отмены отправки"""
     app: BBApplication = context.application
     chat_id    = update.effective_chat.id
     group_name = update.effective_chat.effective_name
@@ -277,8 +288,8 @@ async def group_upload_aproved_qr_xlsx_cancel_handler(update: Update, context: C
     
     return ConversationHandler.END
 
-async def group_upload_aproved_qr_xlsx_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обработчик нажатия на кнопку старта отправки """
+async def group_upload_aproved_passes_zip_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработчик отправки файла с фото пропусков"""
     app: BBApplication = context.application
     chat_id    = update.effective_chat.id
     group_name = update.effective_chat.effective_name
@@ -286,42 +297,104 @@ async def group_upload_aproved_qr_xlsx_document_handler(update: Update, context:
     settings   = await app.provider.settings
 
     if not group or group.status != GroupStatusEnum.SUPER_ADMIN:
-        logger.info(f"Got upload approved from unknown group {chat_id=} and {group_name=}")
+        logger.info(f"Got upload photos zip from unknown group {chat_id=} and {group_name=}")
         return ConversationHandler.END
     
+    logger.info(f"Got upload photos zip from group {chat_id=} and {group_name=}")
+    
+    async with app.provider.db_session() as session:
+        passes_bucket = await session.scalar(
+            select(Field.image_bucket)
+            .where(Field.key == settings.pass_user_field)
+        )
+        if not passes_bucket:
+            raise Exception(f"There is no image_bucket at field {settings.pass_user_field=}")
+
     file = await update.effective_message.document.get_file()
 
     bio = io.BytesIO()
     await file.download_to_memory(bio)
     bio.seek(0)
 
-    qrs_df = pd.read_excel(bio)
+    zip_photos = zipfile.ZipFile(bio)
 
-    logger.debug(f"Qrs df:\n{qrs_df}")
+    context.chat_data['zip_photos'] = zip_photos.namelist()
 
-    qr_field_key   = settings.qr_code_user_field
+    for zip_photo in context.chat_data['zip_photos']:
+        zip_photo_bio = io.BytesIO(zip_photos.read(zip_photo))
+        zip_photo_bio.seek(0)
+        await app.provider.minio.upload(passes_bucket, zip_photo, zip_photo_bio, filetype.guess_mime(zip_photo_bio))
+
+    done_names = "\n".join(map(escape_markdown, context.chat_data['zip_photos']))
+    await update.effective_message.reply_markdown(
+        f"{app.provider.config.i18n.send_approved_zip_photos_done}\n\n{done_names}",
+    )
+    
+    await update.effective_message.reply_markdown(
+        app.provider.config.i18n.send_approved_to_send,
+        reply_markup=ReplyKeyboardMarkup([
+            [app.provider.config.i18n.cancel],
+        ])
+    )
+
+    return GroupApprovePassesConversation.XLSX_AWAIT
+
+async def group_upload_aproved_passes_xlsx_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработчик отправки файла с обработанными пропусками"""
+    app: BBApplication = context.application
+    chat_id    = update.effective_chat.id
+    group_name = update.effective_chat.effective_name
+    group      = await _get_group_by_chat_id_or_none(app, chat_id)
+    settings   = await app.provider.settings
+
+    if not group or group.status != GroupStatusEnum.SUPER_ADMIN:
+        logger.info(f"Got upload approved passes from unknown group {chat_id=} and {group_name=}")
+        return ConversationHandler.END
+    
+    logger.info(f"Got upload approved passes from group {chat_id=} and {group_name=}")
+
+    file = await update.effective_message.document.get_file()
+
+    bio = io.BytesIO()
+    await file.download_to_memory(bio)
+    bio.seek(0)
+
+    passes_df = pd.read_excel(bio)
+
+    logger.debug(f"Passes df:\n{passes_df}")
+
+    pass_field_key = settings.pass_user_field
     name_field_key = settings.user_document_name_field
 
-    qrs_to_save_df = qrs_df.loc[
-        ~qrs_df[qr_field_key].isin(["", None]) &
-        qrs_df[qr_field_key].notna() &
-        qrs_df[qr_field_key].notnull()
-    ]
+    to_save_selector = (
+        passes_df[pass_field_key].isin(context.chat_data['zip_photos']) &
+        passes_df[pass_field_key].notna() &
+        passes_df[pass_field_key].notnull()
+    )
 
-    logger.debug(f"Qrs to be saved df:\n{qrs_to_save_df[["id", name_field_key]]}")
+    passes_to_save_df = passes_df.loc[to_save_selector]
+    passes_not_to_save_df = passes_df.loc[~to_save_selector]
+    
+    if not passes_not_to_save_df.empty:
+        would_not_be_safe = "\n".join(passes_not_to_save_df[name_field_key].values)
+        await update.effective_message.reply_markdown(
+            f"{app.provider.config.i18n.would_not_be_safe}\n\n{would_not_be_safe}"
+        )
+
+    logger.debug(f"Qrs to be saved df:\n{passes_to_save_df[["id", name_field_key]]}")
 
     async with app.provider.db_session() as session:
-        for _,row in qrs_to_save_df.iterrows():
-            field_id = await session.scalar(select(Field.id).where(Field.key == qr_field_key))
+        for _,row in passes_to_save_df.iterrows():
+            field_id = await session.scalar(select(Field.id).where(Field.key == pass_field_key))
             if not field_id:
-                raise Exception(f"Not found field with key {qr_field_key=}")
+                raise Exception(f"Not found field with key {pass_field_key=}")
             
             user_id     = int(row["id"])
-            field_value = row[qr_field_key]
+            field_value = row[pass_field_key]
             await session.execute(
                 sql_update(User)
                 .where(User.id == user_id)
-                .values(qr_code_status = QrCodeSubmitStatus.APPROVED)
+                .values(pass_status = PassSubmitStatus.APPROVED)
             )
             prev_field = await session.scalar(
                 select(UserFieldValue)
@@ -353,7 +426,7 @@ async def group_upload_aproved_qr_xlsx_document_handler(update: Update, context:
         
         await session.commit()
         
-    done_names = "\n".join(qrs_to_save_df[name_field_key].values)
+    done_names = "\n".join(passes_to_save_df[name_field_key].values)
     await update.effective_message.reply_markdown(
         f"{app.provider.config.i18n.send_approved_done}\n\n{done_names}",
         reply_markup=ReplyKeyboardMarkup([

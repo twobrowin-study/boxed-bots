@@ -28,7 +28,7 @@ from utils.custom_types import (
     UserFieldDataPrepared,
     ReplyTypeEnum,
     FieldStatusEnum,
-    QrCodeSubmitStatus,
+    PassSubmitStatus,
 )
 
 from bot.helpers.promocodes import send_promocodes
@@ -46,7 +46,7 @@ from bot.helpers.fields import (
     get_user_field_value_by_key,
 )
 
-from bot.callback_constants import UserChangeFieldCallback, UserSubmitQrCallback, UserHelpQrCallback
+from bot.callback_constants import UserChangeFieldCallback, UserSubmitPassCallback, UserChangePassFieldCallback
 
 async def insert_or_update_user_field_value(
         session: AsyncSession,
@@ -369,7 +369,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
 
 async def user_change_field_and_answer(update: Update, context: ContextTypes.DEFAULT_TYPE,
                                         user: User, settings: Settings, session: AsyncSession,
-                                        message_type: str) -> bool:
+                                        message_type: str, change_only_inline_keyboard: bool = False) -> bool:
     """
     Обновляет запись пользователя по логике изменения значения поля
 
@@ -441,33 +441,52 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         message_id = update.message.id
     )
 
-    fields, user_fields = await get_user_me_fields(
-        update, context,
-        user, curr_field.branch_id,
-        session
-    )
-
-    fields_text = "\n".join([
-        f"*{field.key}*: `{user_fields[field.id].value}`"
-        for field in fields
-    ])
-
-    try:
-        await bot.edit_message_text(
-            chat_id      = user.chat_id,
-            message_id   = user.change_field_message_id,
-            text         = fields_text,
-            parse_mode   = ParseMode.MARKDOWN,
-            reply_markup = InlineKeyboardMarkup([
-                [InlineKeyboardButton(
-                    text=f"{app.provider.config.i18n.change if not user_fields[field.id].empty else app.provider.config.i18n.append} {field.key}",
-                    callback_data=UserChangeFieldCallback.TEMPLATE.format(field_id = field.id)
-                )]
-                for field in fields
-            ]),
+    if change_only_inline_keyboard:
+        try:
+            await bot.edit_message_reply_markup(
+                chat_id      = user.chat_id,
+                message_id   = user.pass_change_field_message_id,
+                reply_markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(
+                        text=f"{app.provider.config.i18n.change if user_field_value_data else app.provider.config.i18n.append} {curr_field.key}",
+                        callback_data=UserChangePassFieldCallback.TEMPLATE.format(field_id = curr_field.id)
+                    )],
+                    [InlineKeyboardButton(
+                        text = app.provider.config.i18n.submit_pass,
+                        callback_data = UserSubmitPassCallback.PATTERN
+                    )],
+                ]),
+            )
+        except Exception:
+            logger.warning(f"Was not able to modify message after updating user {chat_id=} {username=} {user.curr_field_id=}")
+    else:
+        fields, user_fields = await get_user_me_fields(
+            update, context,
+            user, curr_field.branch_id,
+            session, False
         )
-    except Exception:
-        logger.warning(f"Was not able to modify message after updating user {chat_id=} {username=} {user.curr_field_id=}")
+
+        fields_text = "\n".join([
+            f"*{field.key}*: `{user_fields[field.id].value}`"
+            for field in fields
+        ])
+
+        try:
+            await bot.edit_message_text(
+                chat_id      = user.chat_id,
+                message_id   = user.change_field_message_id,
+                text         = fields_text,
+                parse_mode   = ParseMode.MARKDOWN,
+                reply_markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(
+                        text=f"{app.provider.config.i18n.change if not user_fields[field.id].empty else app.provider.config.i18n.append} {field.key}",
+                        callback_data=UserChangeFieldCallback.TEMPLATE.format(field_id = field.id)
+                    )]
+                    for field in fields
+                ]),
+            )
+        except Exception:
+            logger.warning(f"Was not able to modify message after updating user {chat_id=} {username=} {user.curr_field_id=}")
     
     await session.execute(
         sql_update(User)
@@ -536,51 +555,67 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
 
     if keyboard_key.status == KeyboardKeyStatusEnum.NEWS:
         async with app.provider.db_session() as session:
-            news_posts = await session.scalars(
-                select(NewsPost)
-                .order_by(NewsPost.id.desc())
-                .limit(int(settings.number_of_last_news_to_show))
-            )
+            news_select = select(NewsPost).order_by(NewsPost.id.desc()).limit(int(settings.number_of_last_news_to_show))
+            if keyboard_key.news_tag:
+                news_select = news_select.where(NewsPost.tags.icontains(keyboard_key.news_tag))
+            news_posts = await session.scalars(news_select)
             for news_post in reversed(news_posts.all()):
-                await bot.forward_message(
-                    chat_id=chat_id,
-                    from_chat_id=news_post.chat_id,
-                    message_id=news_post.message_id
-                )
+                try:
+                    await bot.forward_message(
+                        chat_id=chat_id,
+                        from_chat_id=news_post.chat_id,
+                        message_id=news_post.message_id
+                    )
+                except Exception:
+                    logger.warning(f"Was not able to forward message with {news_post.id=}")
         return keyboard_key
 
-    if keyboard_key.status == KeyboardKeyStatusEnum.QR:
+    if keyboard_key.status == KeyboardKeyStatusEnum.PASS:
         settings = await app.provider.settings
         async with app.provider.db_session() as session:
-            qr_code = await session.scalar(
-                select(UserFieldValue.value)
-                .where(Field.key == settings.qr_code_user_field)
+            pass_selected = await session.execute(
+                select(UserFieldValue.value, Field.image_bucket)
+                .where(Field.key == settings.pass_user_field)
                 .where(UserFieldValue.user_id == user.id)
                 .where(UserFieldValue.field_id == Field.id)
             )
-            if qr_code in [None, ""] and user.qr_code_status == QrCodeSubmitStatus.NOT_SUBMITED:
-                await update.message.reply_markdown(
-                    settings.no_qr_code_message,
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(
-                            text = app.provider.config.i18n.submit_qr,
-                            callback_data = UserSubmitQrCallback.PATTERN
-                        )
-                    ]])
+            pass_row = pass_selected.one_or_none()
+            pass_photo, pass_image_bucket = (None, None)
+            if pass_row:
+                pass_photo, pass_image_bucket = pass_row.t
+            if not pass_photo and user.pass_status == PassSubmitStatus.NOT_SUBMITED:
+                request_pass_field_value = await session.scalar(
+                    select(UserFieldValue.value)
+                    .where(Field.key == settings.user_field_to_request_pass)
+                    .where(UserFieldValue.user_id == user.id)
+                    .where(UserFieldValue.field_id == Field.id)
                 )
-            elif qr_code in [None, ""] and user.qr_code_status == QrCodeSubmitStatus.SUBMITED:
-                await update.message.reply_markdown(settings.qr_submitted_message)
+                request_pass_field = await session.scalar(
+                    select(Field)
+                    .where(Field.key == settings.user_field_to_request_pass)
+                )
+                await update.message.reply_markdown(
+                    settings.pass_hint_message,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton(
+                            text=f"{app.provider.config.i18n.change if request_pass_field_value else app.provider.config.i18n.append} {request_pass_field.key}",
+                            callback_data=UserChangePassFieldCallback.TEMPLATE.format(field_id = request_pass_field.id)
+                        )],
+                        [InlineKeyboardButton(
+                            text = app.provider.config.i18n.submit_pass,
+                            callback_data = UserSubmitPassCallback.PATTERN
+                        )],
+                    ])
+                )
+            elif not pass_photo and user.pass_status == PassSubmitStatus.SUBMITED:
+                await update.message.reply_markdown(settings.pass_submitted_message)
             else:
+                pass_photo_bio, _ = await app.provider.minio.download(pass_image_bucket, pass_photo)
                 await update.message.reply_photo(
-                    qr_code,
-                    caption=settings.qr_code_message,
+                    pass_photo_bio,
+                    caption=settings.pass_message,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(
-                            text = app.provider.config.i18n.help_qr,
-                            callback_data = UserHelpQrCallback.PATTERN
-                        )
-                    ]])
+                    reply_markup=await get_keyboard_of_user(session, user, from_parent_key=keyboard_key)
                 )
         return keyboard_key
     
@@ -624,7 +659,7 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
     return None
 
 async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                 user: User, branch_id: int, session: AsyncSession) -> tuple[list[Field], dict[int, UserFieldDataPrepared]]:
+                                 user: User, branch_id: int, session: AsyncSession, send_documents_and_photos: bool = True) -> tuple[list[Field], dict[int, UserFieldDataPrepared]]:
     """Получает информацию о пользователе по нажатию кнопкии "Обо мне" или "Изменить профиль"""""
     app: BBApplication = context.application
     chat_id  = update.effective_user.id
@@ -649,7 +684,7 @@ async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
             )
             continue
         
-        if user_fields[field.id].document_bucket:
+        if user_fields[field.id].document_bucket and send_documents_and_photos:
             logger.info(f"Trying to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             if update.message:
@@ -669,7 +704,7 @@ async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
             )
             continue
 
-        if user_fields[field.id].image_bucket:
+        if user_fields[field.id].image_bucket and send_documents_and_photos:
             logger.info(f"Trying to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             if update.message:

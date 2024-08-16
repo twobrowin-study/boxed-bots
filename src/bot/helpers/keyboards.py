@@ -94,7 +94,7 @@ async def get_keyboard_of_user(
             (
                 (KeyboardKey.status.in_([
                     KeyboardKeyStatusEnum.NEWS,
-                    KeyboardKeyStatusEnum.QR,
+                    KeyboardKeyStatusEnum.PASS,
                     KeyboardKeyStatusEnum.PROMOCODES
                 ])) &
                 (KeyboardKey.branch_id == None) &

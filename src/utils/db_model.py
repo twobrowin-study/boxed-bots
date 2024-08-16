@@ -26,7 +26,7 @@ from utils.custom_types import (
     UserDataPrepared,
     PersonalNotificationStatusEnum,
     PromocodeStatusEnum,
-    QrCodeSubmitStatus
+    PassSubmitStatus
 )
 from utils.config_model import I18n
 
@@ -131,6 +131,13 @@ class ReplyableConditionMessage(Base):
     text_markdown: Mapped[str]      = mapped_column(nullable=False)
     photo_link:    Mapped[str|None] = mapped_column(nullable=True, default=None)
 
+    photo_bucket:   Mapped[str|None] = mapped_column(default=None)
+    """Бакет, в котором хранится фото, отправляемое вместе с сообщением"""
+    photo_filename: Mapped[str|None] = mapped_column(default=None)
+    """Название фото в хранилище S3"""
+    photo_file_id:  Mapped[str|None] = mapped_column(default=None)
+    """Id файла фото в telegram"""
+
     condition_bool_field_id: Column[int|None] = Column(Integer, ForeignKey(Field.id), nullable=True)
     """
     Id булева поля, используемого как условие для показа кнопки клавиатуры или отправки уведомления
@@ -208,8 +215,11 @@ class User(Base):
     curr_keyboard_key_parent_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
     """Id родительской кнопки последней клавиши, на которую нажал пользователь"""
 
-    qr_code_status: Mapped[QrCodeSubmitStatus] = mapped_column(default=QrCodeSubmitStatus.NOT_SUBMITED)
-    """Статус обработки QR кода"""
+    pass_status: Mapped[PassSubmitStatus] = mapped_column(default=PassSubmitStatus.NOT_SUBMITED)
+    """Статус обработки пропуска"""
+
+    pass_change_field_message_id: Mapped[int|None] = mapped_column(nullable=True, default=None, type_=BigInteger)
+    """Id сообщения, в котором пользователь на данный момент менят данные для получения пропуска"""
 
     def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None) -> dict[str, str]:
         """
@@ -280,6 +290,7 @@ class UserFieldValue(Base):
     field_id = Column(Integer, ForeignKey(Field.id), nullable=False)
 
     value: Mapped[str] = mapped_column(nullable=False)
+    value_file_id: Mapped[str|None] = mapped_column()
     
     message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
 
@@ -308,6 +319,9 @@ class KeyboardKey(Base):
 
     parent_key_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
     """Id клавиши, которая является родительской для данной кнопки"""
+
+    news_tag: Mapped[str|None] = mapped_column(default=None)
+    """Тег новости, по которому будет выполнен поиск новостей"""
 
 class Notification(Base):
     """
@@ -381,19 +395,25 @@ class Settings(Base):
     report_send_every_x_active_users:       Mapped[str] = mapped_column(nullable=False)
     report_currently_active_users_template: Mapped[str] = mapped_column(nullable=False)
     
-    qr_code_user_field: Mapped[str] = mapped_column()
-    """Название ветки и пользовательского поля, содержащего QR коды"""
-    qr_code_message: Mapped[str] = mapped_column()
-    """Сообщение, посылаемое вместе с QR кодом пользователя"""
-    qr_hint_message: Mapped[str] = mapped_column()
-    """Сообщение помощи пользователю о регаистрации qr кода"""
-    no_qr_code_message: Mapped[str] = mapped_column()
-    """Сообщение, посылаемое если пользователю не выдан QR код"""
-    qr_submit_message: Mapped[str] = mapped_column()
-    """Сообщение высылаемое пользователю при начале отправки заявки на QR код"""
-    qr_submitted_message: Mapped[str] = mapped_column()
-    """Сообщение высылаемое пользователю после подтверждения отправки заявки на QR код"""
-    qr_submited_superadmin_j2_template: Mapped[str] = mapped_column()
+    pass_user_field: Mapped[str] = mapped_column()
+    """Название ветки и пользовательского поля, содержащего пропуск"""
+    user_field_to_request_pass: Mapped[str] = mapped_column()
+    """Необязательно по умолчанию поле, необходимое для получения пропуска"""
+    pass_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое вместе с пропуском пользователя"""
+    pass_removed_message: Mapped[str] = mapped_column()
+    """Сообщение, высылаемое в случае если запланирована доставка сообщения с пропуском, но пропуска нет"""
+    pass_hint_message: Mapped[str] = mapped_column()
+    """Сообщение помощи пользователю о регистрации пропуска"""
+    pass_add_field_to_request_value: Mapped[str] = mapped_column()
+    """Сообщение, отправляемое в случае если невозможно отправить запрос на формирование пропуска поскольку не заполнено поле, необходимое для получения пропуска"""
+    pass_not_yet_approved_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое если пользователю ещё не выдан пропуск"""
+    pass_submit_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю при начале отправки заявки на пропуск"""
+    pass_submitted_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю после подтверждения отправки заявки на пропуск"""
+    pass_submited_superadmin_j2_template: Mapped[str] = mapped_column()
     """Шаблон сообщения, отправляемого суперадминистраторам при отправке пользователем заявки на qr код"""
 
     personal_notification_jinja_template: Mapped[str] = mapped_column()
@@ -417,6 +437,8 @@ class NewsPost(Base):
     """Уникальный идентификатор канала новостей"""
     message_id: Mapped[int] = mapped_column(nullable=False, index=False, unique=True, type_=BigInteger)
     """Уникальный идентификатор сообщения новостей"""
+    tags: Mapped[str|None] = mapped_column(default=None)
+    """Теги сообщения"""
 
 class Promocode(Base):
     """Доступные промокоды"""

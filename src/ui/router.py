@@ -44,7 +44,7 @@ from utils.custom_types import (
     ReplyTypeEnum,
     PersonalNotificationStatusEnum,
     PromocodeStatusEnum,
-    QrCodeSubmitStatus
+    PassSubmitStatus
 )
 
 from ui.ui_keycloak import UIUser
@@ -207,12 +207,12 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                 return JSONResponse({'error': True, 'message': message}, status_code=500)
             user_id = int(user_id)
 
-            fields_request: dict[str, dict[str, str]] = fields_dict['fields']
-
-            if not isinstance(fields_request, dict):
-                message = f"Fields request {fields_request=} is not dict"
+            if not isinstance(fields_dict['fields'], dict):
+                message = f"Fields request {fields_dict['fields']=} is not dict"
                 logger.warning(message)
                 return JSONResponse({'error': True, 'message': message}, status_code=500)
+
+            fields_request: dict[str, dict[str, str]] = fields_dict['fields']
 
             for field_id, field_value in fields_request.items():
                 if not field_id.isnumeric():
@@ -249,11 +249,11 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                         personal_notification_status = PersonalNotificationStatusEnum.INACTIVE
                     
                     settings = await provider.settings
-                    if field.key == settings.qr_code_user_field:
+                    if field.key == settings.pass_user_field:
                         await session.execute(
                             update(User)
                             .where(User.id == user_id)
-                            .values(qr_code_status = QrCodeSubmitStatus.APPROVED)
+                            .values(pass_status = PassSubmitStatus.APPROVED)
                         )
 
                 if not prev_field:
@@ -273,7 +273,8 @@ async def users(branch_id: int, request: Request) -> HTMLResponse:
                         .where(UserFieldValue.id == prev_field.id)
                         .values(
                             value = value,
-                            personal_notification_status = personal_notification_status
+                            personal_notification_status = personal_notification_status,
+                            value_file_id = None
                         )
                     )
 
@@ -540,6 +541,14 @@ async def replyable_condition_messages(request: Request) -> JSONResponse:
         return bad_responce
     
     for _,replyable_condition_messages_attr in replyable_condition_messages_attrs.items():
+        replyable_condition_messages_attr['photo_file_id'] = None
+
+        if 'photo_link' in replyable_condition_messages_attr and replyable_condition_messages_attr['photo_link']:
+            if 'photo_bucket' in replyable_condition_messages_attr and replyable_condition_messages_attr['photo_bucket'] or 'photo_filename' in replyable_condition_messages_attr and replyable_condition_messages_attr['photo_filename']:
+                    message = f"Found photo_link in replyable_condition_messages_attr while photo_bucket or photo_filename are also in replyable_condition_messages_attr"
+                    logger.warning(message)
+                    return JSONResponse({'error': True, 'message': message}, status_code=500)
+        
         if 'reply_type' in replyable_condition_messages_attr:
             if replyable_condition_messages_attr['reply_type'] == ReplyTypeEnum.BRANCH_START:
                 if 'reply_answer_field_branch_id' not in replyable_condition_messages_attr or not replyable_condition_messages_attr['reply_answer_field_branch_id']:

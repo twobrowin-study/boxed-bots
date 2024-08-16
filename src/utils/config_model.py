@@ -70,13 +70,16 @@ class Defaults(BaseModel, extra="forbid"):
     report_send_every_x_active_users:       DefaultValue
     report_currently_active_users_template: DefaultValue
 
-    qr_code_user_field:   DefaultValue
-    qr_code_message:      DefaultValue
-    qr_hint_message:      DefaultValue
-    no_qr_code_message:   DefaultValue
-    qr_submit_message:    DefaultValue
-    qr_submitted_message: DefaultValue
-    qr_submited_superadmin_j2_template: DefaultValue
+    pass_user_field:                      DefaultValue
+    user_field_to_request_pass:           DefaultValue
+    pass_message:                         DefaultValue
+    pass_removed_message:                 DefaultValue
+    pass_hint_message:                    DefaultValue
+    pass_add_field_to_request_value:      DefaultValue
+    pass_not_yet_approved_message:        DefaultValue
+    pass_submit_message:                  DefaultValue
+    pass_submitted_message:               DefaultValue
+    pass_submited_superadmin_j2_template: DefaultValue
 
     personal_notification_jinja_template: DefaultValue
     expired_promocodes_jinja_template:    DefaultValue
@@ -181,7 +184,7 @@ class I18n(BaseModel, extra="forbid"):
     keyboard_key_normal:     str
     keyboard_key_deferred:   str
     keyboard_key_me:         str
-    keyboard_key_qr:         str
+    keyboard_key_pass:       str
     keyboard_key_news:       str
     keyboard_key_back:       str
     keyboard_key_me_change:  str
@@ -275,18 +278,26 @@ class I18n(BaseModel, extra="forbid"):
     skip:   str
     change_canceled: str
 
-    help_qr:     str
-    submit_qr:   str
-    confirm_qr:  str
-    qr_canceled: str
+    help_pass:     str
+    submit_pass:   str
+    confirm_pass:  str
+    pass_canceled: str
 
     download_submited: str
     send_approved:     str
     submitted_empty:   str
 
+    send_approved_zip_photos: str
+    send_approved_zip_photos_done: str
     send_approved_to_send:  str
     send_approved_canceled: str
+    would_not_be_safe:      str
     send_approved_done:     str
+
+    photo_bucket:   str
+    photo_filename: str
+
+    news_tag: str
 
 class ConfigYaml(BaseSettings):
     """

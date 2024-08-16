@@ -6,6 +6,7 @@
       <tr>
         <th id="keyboard_keys-key"                       >{{ i18n.key }}</th>
         <th id="keyboard_keys-status"                    >{{ i18n.status }}</th>
+        <th id="keyboard_keys-news_tag"                  >{{ i18n.news_tag }}</th>
         <th id="keyboard_keys-reply_condition_message_id">{{ i18n.reply_condition_message_id }}</th>
         <th id="keyboard_keys-branch_id"                 >{{ i18n.branch_id }}</th>
         <th id="keyboard_keys-parent_key_id"             >{{ i18n.parent_key_id }}</th>
@@ -28,6 +29,7 @@
               {% endfor %}
             </select>
           </td>
+          <td id="keyboard_keys-{{ keyboard_key.id }}-news_tag" class="row-editable">{% if keyboard_key.news_tag %}{{ keyboard_key.news_tag }}{% endif %}</td>
           <td id="keyboard_keys-{{ keyboard_key.id }}-reply_condition_message_id" class="row-editable">
             <select id="keyboard_keys-{{ keyboard_key.id }}-reply_condition_message_id-id_value" class="form-select" disabled>
               <option value="None" {% if not keyboard_key.reply_condition_message_id  %}selected='true'{% endif %}>{{ i18n.none }}</option>
@@ -78,6 +80,7 @@
             {% endfor %}
           </select>
         </td>
+        <td id="keyboard_keys-new-news_tag" class="row-editable table-info" contenteditable="true"></td>
         <td id="keyboard_keys-new-reply_condition_message_id" class="row-editable table-info">
           <select id="keyboard_keys-new-reply_condition_message_id-id_value" class="form-select">
             <option value="None">{{ i18n.none }}</option>

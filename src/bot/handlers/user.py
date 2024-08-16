@@ -12,9 +12,10 @@ from jinja2 import Template
 from utils.db_model import (
     User, Field,
     FieldBranch,
-    ReplyableConditionMessage
+    ReplyableConditionMessage,
+    UserFieldValue
 )
-from utils.custom_types import QrCodeSubmitStatus
+from utils.custom_types import PassSubmitStatus
 
 from bot.application import BBApplication
 
@@ -39,7 +40,8 @@ from bot.callback_constants import (
     UserStartBranchReplyCallback,
     UserFullTextAnswerReplyCallback,
     UserFastAnswerReplyCallback,
-    UserSubmitQrCallback
+    UserSubmitPassCallback,
+    UserChangePassFieldCallback
 )
 
 from bot.handlers.group import group_send_to_all_superadmin_tasked
@@ -154,6 +156,12 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                 return
             return await session.commit()
         
+        if user.pass_change_field_message_id:
+            user_change_err = await user_change_field_and_answer(update, context, user, settings, session, message_type, True)
+            if user_change_err:
+                return
+            return await session.commit()
+        
         user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
         if user_curr_field and update.message.text != app.provider.config.i18n.skip:
             full_filename = await upload_telegram_file_to_minio_and_return_filename(update, context, user, user_curr_field, settings, session)
@@ -210,6 +218,51 @@ async def user_change_state_callback(update: Update, context: ContextTypes.DEFAU
             .values(
                 curr_field_id = changing_field.id,
                 change_field_message_id = update.effective_message.id
+            )
+        )
+
+        await session.commit()
+
+async def user_change_pass_state_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Обрабатывает нажатие на кнопку изменения поля на инлайн клавиатуре для изменения поля, необходимого для получения пропуска
+    """
+    app: BBApplication = context.application
+    chat_id  = update.effective_user.id
+    username = update.effective_user.username
+
+    await update.callback_query.answer()
+
+    changing_field_id = int(update.callback_query.data.removeprefix(UserChangePassFieldCallback.PREFIX))
+
+    logger.info(f"Got change pass field callback from user {chat_id=} {username=} for field {changing_field_id=}")
+
+    async with app.provider.db_session() as session:
+        user = await get_user_by_chat_id_or_none(session, chat_id)
+
+        if not user:
+            return logger.warning(f"Got change pass field callback from unknown user {chat_id=} {username=} for field {changing_field_id=}")
+
+        changing_field_selected = await session.execute(
+            select(Field)
+            .where(Field.id == changing_field_id)
+        )
+        changing_field = changing_field_selected.scalar_one_or_none()
+
+        if not changing_field:
+            return logger.warning(f"Got change pass field callback from user {chat_id=} {username=} for unknown field {changing_field_id=}")
+        
+        await update.effective_message.reply_markdown(
+            text = changing_field.question_markdown,
+            reply_markup = construct_keyboard_reply(changing_field, app, deferable_key=False, cancel_key=True)
+        )
+
+        await session.execute(
+            sql_udate(User)
+            .where(User.id == user.id)
+            .values(
+                curr_field_id = changing_field.id,
+                pass_change_field_message_id = update.effective_message.id
             )
         )
 
@@ -360,21 +413,39 @@ async def fast_answer_callback_handler(update: Update, context: ContextTypes.DEF
 
         await session.commit()
 
-async def qr_submit_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def pass_submit_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработка нажатия на кнопку отправки заявки на получение qr кода"""
     app: BBApplication = context.application
     settings = await app.provider.settings
+    chat_id  = update.effective_user.id
     await update.callback_query.answer()
-    await update.effective_message.reply_markdown(
-        settings.qr_submit_message,
-        reply_markup = ReplyKeyboardMarkup([
-            [ app.provider.config.i18n.confirm_qr ],
-            [ app.provider.config.i18n.cancel     ]
-        ])
-    )
-    return UserSubmitQrCallback.STATE_SUBMIT_AWAIT
+    async with app.provider.db_session() as session:
+        user = await get_user_by_chat_id_or_none(session, chat_id)
+        request_pass_field_value = await session.scalar(
+            select(UserFieldValue.value)
+            .where(Field.key == settings.user_field_to_request_pass)
+            .where(UserFieldValue.user_id == user.id)
+            .where(UserFieldValue.field_id == Field.id)
+        )
+        if user.pass_status == PassSubmitStatus.SUBMITED:
+            await update.effective_message.reply_markdown(settings.pass_submitted_message)
+            return ConversationHandler.END
+        if request_pass_field_value:
+            await update.effective_message.reply_markdown(
+                settings.pass_submit_message,
+                reply_markup = ReplyKeyboardMarkup([
+                    [ app.provider.config.i18n.confirm_pass ],
+                    [ app.provider.config.i18n.cancel     ]
+                ])
+            )
+            return UserSubmitPassCallback.STATE_SUBMIT_AWAIT
+        else:
+            await update.effective_message.reply_markdown(
+                settings.pass_add_field_to_request_value,
+            )
+            return ConversationHandler.END
 
-async def qr_submit_approve_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def pass_submit_approve_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработка нажатия на кнопку с подтверждения отправки заявки"""
     app: BBApplication = context.application
     settings = await app.provider.settings
@@ -382,16 +453,16 @@ async def qr_submit_approve_handler(update: Update, context: ContextTypes.DEFAUL
     async with app.provider.db_session() as session:
         user = await get_user_by_chat_id_or_none(session, chat_id)
         await update.effective_message.reply_markdown(
-            settings.qr_submitted_message,
+            settings.pass_submitted_message,
             reply_markup = await get_keyboard_of_user(session, user)
         )
         await session.execute(
             sql_udate(User)
             .where(User.id == user.id)
-            .values(qr_code_status = QrCodeSubmitStatus.SUBMITED)
+            .values(pass_status = PassSubmitStatus.SUBMITED)
         )
         await group_send_to_all_superadmin_tasked(
-            app, Template(settings.qr_submited_superadmin_j2_template).render(fields = user.prepare_fields()),
+            app, Template(settings.pass_submited_superadmin_j2_template).render(fields = user.prepare_fields()),
             parse_mode = ParseMode.MARKDOWN,
             reply_markup = ReplyKeyboardMarkup([
                 [app.provider.config.i18n.download_submited],
@@ -401,14 +472,14 @@ async def qr_submit_approve_handler(update: Update, context: ContextTypes.DEFAUL
         await session.commit()
     return ConversationHandler.END
 
-async def qr_submit_cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def pass_submit_cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработка нажатия на кнопку с отменой от отправки заявки"""
     app: BBApplication = context.application
     chat_id  = update.effective_user.id
     async with app.provider.db_session() as session:
         user = await get_user_by_chat_id_or_none(session, chat_id)
         await update.effective_message.reply_markdown(
-            app.provider.config.i18n.qr_canceled,
+            app.provider.config.i18n.pass_canceled,
             reply_markup = await get_keyboard_of_user(session, user)
         )
     return ConversationHandler.END
@@ -418,4 +489,4 @@ async def qr_help_callback_handler(update: Update, context: ContextTypes.DEFAULT
     app: BBApplication = context.application
     settings = await app.provider.settings
     await update.callback_query.answer()
-    await update.effective_message.reply_markdown(settings.qr_hint_message)
+    # await update.effective_message.reply_markdown(settings.qr_hint_message)

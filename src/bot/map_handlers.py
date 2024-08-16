@@ -27,9 +27,10 @@ from bot.handlers.group import (
     group_report_handler,
     channel_publication_handler,
     group_download_submited_key_handler,
-    group_upload_aproved_qr_xlsx_start_handler,
-    group_upload_aproved_qr_xlsx_cancel_handler,
-    group_upload_aproved_qr_xlsx_document_handler,
+    group_upload_aproved_passes_xlsx_start_handler,
+    group_upload_aproved_passes_xlsx_cancel_handler,
+    group_upload_aproved_passes_zip_document_handler,
+    group_upload_aproved_passes_xlsx_document_handler,
 )
 
 from bot.handlers.user import (
@@ -40,10 +41,11 @@ from bot.handlers.user import (
     branch_start_callback_handler,
     full_text_callback_handler,
     fast_answer_callback_handler,
-    qr_submit_callback_handler,
-    qr_submit_approve_handler,
-    qr_submit_cancel_handler,
+    pass_submit_callback_handler,
+    pass_submit_approve_handler,
+    pass_submit_cancel_handler,
     qr_help_callback_handler,
+    user_change_pass_state_callback,
 )
 
 from bot.handlers.notification import notify_job
@@ -53,9 +55,10 @@ from bot.callback_constants import (
     UserStartBranchReplyCallback,
     UserFullTextAnswerReplyCallback,
     UserFastAnswerReplyCallback,
-    UserSubmitQrCallback,
-    GroupApproveQrConversation,
+    UserSubmitPassCallback,
+    GroupApprovePassesConversation,
     UserHelpQrCallback,
+    UserChangePassFieldCallback,
 )
 
 def map_service_mode_handlers(app: BBApplication) -> None:
@@ -89,15 +92,18 @@ def map_default_handlers(app: BBApplication) -> None:
     ##
     app.add_handler(ConversationHandler(
         entry_points = [
-            MessageHandler(Text(app.provider.config.i18n.send_approved) & ChatType.GROUP, group_upload_aproved_qr_xlsx_start_handler),
+            MessageHandler(Text(app.provider.config.i18n.send_approved) & ChatType.GROUP, group_upload_aproved_passes_xlsx_start_handler),
         ],
         states = {
-            GroupApproveQrConversation.XLSX_AWAIT: [
-                MessageHandler(Document.ALL & ChatType.GROUP, group_upload_aproved_qr_xlsx_document_handler),
+            GroupApprovePassesConversation.ZIP_AWAIT: [
+                MessageHandler(Document.ZIP & ChatType.GROUP, group_upload_aproved_passes_zip_document_handler),
+            ],
+            GroupApprovePassesConversation.XLSX_AWAIT: [
+                MessageHandler(Document.ALL & ChatType.GROUP, group_upload_aproved_passes_xlsx_document_handler),
             ],
         },
         fallbacks = [
-            MessageHandler(Text(app.provider.config.i18n.cancel) & ChatType.GROUP, group_upload_aproved_qr_xlsx_cancel_handler),
+            MessageHandler(Text(app.provider.config.i18n.cancel) & ChatType.GROUP, group_upload_aproved_passes_xlsx_cancel_handler),
             CommandHandler(app.HELP_COMMAND, group_help_handler, filters=ChatType.GROUPS),
         ],
         block = False
@@ -115,14 +121,14 @@ def map_default_handlers(app: BBApplication) -> None:
     ##
     app.add_handler(
         ConversationHandler(
-            entry_points = [CallbackQueryHandler(qr_submit_callback_handler, pattern=UserSubmitQrCallback.PATTERN)],
+            entry_points = [CallbackQueryHandler(pass_submit_callback_handler, pattern=UserSubmitPassCallback.PATTERN)],
             states = {
-                UserSubmitQrCallback.STATE_SUBMIT_AWAIT: [
-                    MessageHandler(Text(app.provider.config.i18n.confirm_qr)&ChatType.PRIVATE, qr_submit_approve_handler)
+                UserSubmitPassCallback.STATE_SUBMIT_AWAIT: [
+                    MessageHandler(Text(app.provider.config.i18n.confirm_pass)&ChatType.PRIVATE, pass_submit_approve_handler)
                 ]
             },
             fallbacks = [
-                MessageHandler(Text(app.provider.config.i18n.cancel)&ChatType.PRIVATE, qr_submit_cancel_handler),
+                MessageHandler(Text(app.provider.config.i18n.cancel)&ChatType.PRIVATE, pass_submit_cancel_handler),
                 CommandHandler(app.HELP_COMMAND,  user_start_help_handler, filters=ChatType.PRIVATE, block=False),
             ],
             block=False
@@ -141,11 +147,12 @@ def map_default_handlers(app: BBApplication) -> None:
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
     app.add_handlers([
-        CallbackQueryHandler(user_change_state_callback,    pattern=UserChangeFieldCallback.PATTERN,         block=False),
-        CallbackQueryHandler(branch_start_callback_handler, pattern=UserStartBranchReplyCallback.PATTERN,    block=False),
-        CallbackQueryHandler(full_text_callback_handler,    pattern=UserFullTextAnswerReplyCallback.PATTERN, block=False),
-        CallbackQueryHandler(fast_answer_callback_handler,  pattern=UserFastAnswerReplyCallback.PATTERN,     block=False),
-        CallbackQueryHandler(qr_help_callback_handler,      pattern=UserHelpQrCallback.PATTERN,              block=False)
+        CallbackQueryHandler(user_change_state_callback,      pattern=UserChangeFieldCallback.PATTERN,         block=False),
+        CallbackQueryHandler(user_change_pass_state_callback, pattern=UserChangePassFieldCallback.PATTERN,     block=False),
+        CallbackQueryHandler(branch_start_callback_handler,   pattern=UserStartBranchReplyCallback.PATTERN,    block=False),
+        CallbackQueryHandler(full_text_callback_handler,      pattern=UserFullTextAnswerReplyCallback.PATTERN, block=False),
+        CallbackQueryHandler(fast_answer_callback_handler,    pattern=UserFastAnswerReplyCallback.PATTERN,     block=False),
+        CallbackQueryHandler(qr_help_callback_handler,        pattern=UserHelpQrCallback.PATTERN,              block=False)
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
     app.job_queue.run_once(notify_job, when=1)
