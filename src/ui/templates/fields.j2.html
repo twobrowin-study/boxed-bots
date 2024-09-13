@@ -33,6 +33,8 @@
         <th id="fields-image_bucket"     >{{ i18n.image_bucket }}</th>
         <th id="fields-document_bucket"  >{{ i18n.document_bucket }}</th>
         <th id="fields-is_skippable"     >{{ i18n.is_skippable }}</th>
+        <th id="fields-check_future_date">{{ i18n.check_future_date }}</th>
+        <th id="fields-check_future_year">{{ i18n.check_future_year }}</th>
         <th id="fields-is_boolean"       >{{ i18n.is_boolean }}</th>
         <th id="fields-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
@@ -78,6 +80,18 @@
                 <option value="true"  {% if     field.is_skippable %}selected='true'{% endif %}>{{ i18n.yes }}</option>
             </select>
           </td>
+          <td id="fields-{{ field.id }}-check_future_date" class="row-editable">
+            <select id="fields-{{ field.id }}-check_future_date-bool_value" class="form-select" disabled>
+                <option value="false" {% if not field.check_future_date %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     field.check_future_date %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+            </select>
+          </td>
+          <td id="fields-{{ field.id }}-check_future_year" class="row-editable">
+            <select id="fields-{{ field.id }}-check_future_year-bool_value" class="form-select" disabled>
+                <option value="false" {% if not field.check_future_year %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     field.check_future_year %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+            </select>
+          </td>
           <td id="fields-{{ field.id }}-is_boolean" class="row-editable">
             <select id="fields-{{ field.id }}-is_boolean-bool_value" class="form-select" disabled>
                 <option value="false" {% if not field.is_boolean %}selected='true'{% endif %}>{{ i18n.no  }}</option>
@@ -117,6 +131,18 @@
         <td id="fields-new-document_bucket"   class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-is_skippable" class="row-editable table-info">
           <select id="fields-new-is_skippable-bool_value" class="form-select">
+              <option value="false">{{ i18n.no  }}</option>
+              <option value="true" >{{ i18n.yes }}</option>
+          </select>
+        </td>
+        <td id="fields-new-check_future_date" class="row-editable table-info">
+          <select id="fields-new-check_future_date-bool_value" class="form-select">
+              <option value="false">{{ i18n.no  }}</option>
+              <option value="true" >{{ i18n.yes }}</option>
+          </select>
+        </td>
+        <td id="fields-new-check_future_year" class="row-editable table-info">
+          <select id="fields-new-check_future_year-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>

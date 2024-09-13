@@ -42,7 +42,8 @@ def construct_keyboard_reply(field: Field, app: BBApplication, deferable_key: bo
 
     if field.answer_options in [None, ''] and bottom_buttons:
         return ReplyKeyboardMarkup(bottom_buttons)
-    elif not bottom_buttons:
+    
+    if field.answer_options in [None, ''] and not bottom_buttons:
         return ReplyKeyboardRemove()
 
     return ReplyKeyboardMarkup([

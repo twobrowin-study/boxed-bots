@@ -412,6 +412,16 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         await update.message.reply_markdown(curr_field.question_markdown)
         return True
     
+    file_size: int|None = None
+    if update.message.document:
+        file_size = update.message.document.file_size
+    elif update.message.photo:
+        file_size = update.message.photo[-1].file_size
+    
+    if file_size and file_size >= 20_000_000:
+        logger.info(f"Got too large file while updating field of user {chat_id=} {username=} {user.curr_field_id=} in message {message_type=}")
+        return await update.message.reply_markdown(settings.file_too_large_reply)
+    
     try:
         user_field_value_data = update.message.text_markdown_urled
     except Exception:
@@ -420,6 +430,18 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
     if curr_field.validation_regexp and curr_field.validation_error_markdown:
         validation_regexp = re.compile(curr_field.validation_regexp)
         if validation_regexp.match(user_field_value_data) is None:
+            return await update.message.reply_markdown(curr_field.validation_error_markdown)
+            
+    if curr_field and curr_field.check_future_date:
+        input_date = datetime.strptime(user_field_value_data, '%d.%m.%Y').date()
+        today      = datetime.today().date()
+        if input_date > today:
+            return await update.message.reply_markdown(curr_field.validation_error_markdown)
+    
+    if curr_field and curr_field.check_future_year:
+        input_year   = datetime.strptime(user_field_value_data, '%Y').year
+        current_year = datetime.today().year
+        if input_year > current_year:
             return await update.message.reply_markdown(curr_field.validation_error_markdown)
         
     if curr_field and curr_field.validation_remove_regexp:
@@ -467,8 +489,9 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
         )
 
         fields_text = "\n".join([
-            f"*{field.key}*: `{user_fields[field.id].value}`"
+            f"*{field.key}*: `{user_fields[field.id].value if len(user_fields[field.id].value) <= 80 else user_fields[field.id].value[:81]+'...'}`"
             for field in fields
+            if not user_fields[field.id].image_bucket and not user_fields[field.id].document_bucket
         ])
 
         try:
@@ -743,8 +766,9 @@ async def post_user_me_information(update: Update, context: ContextTypes.DEFAULT
     )
 
     fields_text = "\n".join([
-        f"*{field.key}*: `{user_fields[field.id].value}`"
+        f"*{field.key}*: `{user_fields[field.id].value if len(user_fields[field.id].value) <= 80 else user_fields[field.id].value[:81]+'...'}`"
         for field in fields
+        if not user_fields[field.id].image_bucket and not user_fields[field.id].document_bucket
     ])
 
     await update.message.reply_markdown(
@@ -769,8 +793,9 @@ async def send_user_change_information(update: Update, context: ContextTypes.DEF
     )
 
     fields_text = "\n".join([
-        f"*{field.key}*: `{user_fields[field.id].value}`"
+        f"*{field.key}*: `{user_fields[field.id].value if len(user_fields[field.id].value) <= 80 else user_fields[field.id].value[:81]+'...'}`"
         for field in fields
+        if not user_fields[field.id].image_bucket and not user_fields[field.id].document_bucket
     ])
 
     await update.message.reply_markdown(

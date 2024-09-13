@@ -57,6 +57,7 @@ class Defaults(BaseModel, extra="forbid"):
     strange_user_error:   DefaultValue
     edited_message_reply: DefaultValue
     error_reply:          DefaultValue
+    file_too_large_reply: DefaultValue
 
     help_normal_group:     DefaultValue
     help_admin_group:      DefaultValue
@@ -298,6 +299,9 @@ class I18n(BaseModel, extra="forbid"):
     photo_filename: str
 
     news_tag: str
+
+    check_future_date: str
+    check_future_year: str
 
 class ConfigYaml(BaseSettings):
     """

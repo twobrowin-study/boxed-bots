@@ -102,6 +102,9 @@ class Field(Base):
     validation_remove_regexp: Mapped[str|None] = mapped_column(default=None)
 
     is_skippable: Mapped[bool] = mapped_column(default=False)
+    
+    check_future_date: Mapped[bool] = mapped_column(default=False)
+    check_future_year: Mapped[bool] = mapped_column(default=False)
 
 class ReplyableConditionMessage(Base):
     """
@@ -382,6 +385,7 @@ class Settings(Base):
     strange_user_error:   Mapped[str] = mapped_column(nullable=False)
     edited_message_reply: Mapped[str] = mapped_column(nullable=False)
     error_reply:          Mapped[str] = mapped_column(nullable=False)
+    file_too_large_reply: Mapped[str] = mapped_column(nullable=False)
     
     help_normal_group:     Mapped[str] = mapped_column(nullable=False)
     help_admin_group:      Mapped[str] = mapped_column(nullable=False)

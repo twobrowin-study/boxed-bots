@@ -8,6 +8,7 @@ from sqlalchemy import select, update as sql_udate
 import re
 from loguru import logger
 from jinja2 import Template
+from datetime import datetime
 
 from utils.db_model import (
     User, Field,
@@ -101,16 +102,30 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
         except Exception:
             field_value = escape_markdown(update.message.text)
         
-        if curr_field and curr_field.validation_regexp and curr_field.validation_error_markdown:
-            validation_regexp = re.compile(curr_field.validation_regexp)
-            if validation_regexp.match(field_value) is None:
-                return await update.message.reply_markdown(curr_field.validation_error_markdown)
+        skip = (update.message.text == app.provider.config.i18n.skip)
+        if not skip:
+            if curr_field and curr_field.validation_regexp and curr_field.validation_error_markdown:
+                validation_regexp = re.compile(curr_field.validation_regexp)
+                if validation_regexp.match(field_value) is None:
+                    return await update.message.reply_markdown(curr_field.validation_error_markdown)
+            
+            if curr_field and curr_field.check_future_date:
+                input_date = datetime.strptime(field_value, '%d.%m.%Y').date()
+                today      = datetime.today().date()
+                if input_date > today:
+                    return await update.message.reply_markdown(curr_field.validation_error_markdown)
+            
+            if curr_field and curr_field.check_future_year:
+                input_year   = datetime.strptime(field_value, '%Y').year
+                current_year = datetime.today().year
+                if input_year > current_year:
+                    return await update.message.reply_markdown(curr_field.validation_error_markdown)
         
-        if curr_field and curr_field.validation_remove_regexp:
-            field_value = re.sub(re.compile(curr_field.validation_remove_regexp), "", field_value)
+            if curr_field and curr_field.validation_remove_regexp:
+                field_value = re.sub(re.compile(curr_field.validation_remove_regexp), "", field_value)
 
         user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
-        if user_curr_field and update.message.text != app.provider.config.i18n.skip:
+        if user_curr_field and not skip:
             await insert_or_update_user_field_value(
                 session    = session,
                 user_id    = user.id,
@@ -119,7 +134,7 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
                 message_id = update.message.id
             )
             return await session.commit()
-        elif update.message.text == app.provider.config.i18n.skip:
+        elif skip:
             return await session.commit()
 
         keyboard_key = await answer_to_user_keyboard_key_hit(update, context, user, session)
