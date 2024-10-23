@@ -143,7 +143,7 @@ def map_default_handlers(app: BBApplication) -> None:
 
     app.add_handlers([
         MessageHandler(ChatType.PRIVATE & TEXT,                                user_message_text_handler,           block=False),
-        MessageHandler(ChatType.PRIVATE & (PHOTO|Document.IMAGE|Document.ZIP), user_message_photo_document_handler, block=False),
+        MessageHandler(ChatType.PRIVATE & (PHOTO|Document.IMAGE|Document.ZIP|Document.PDF), user_message_photo_document_handler, block=False),
     ], group=app.UPDATE_GROUP_USER_REQUEST)
 
     app.add_handlers([

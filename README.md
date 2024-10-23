@@ -15,8 +15,7 @@
 ## Сборка контейнера
 
 ```bash
-docker-compose build
-docker-compose push
+docker compose build --push
 ```
 
 ## Локальная сборка и отладка
