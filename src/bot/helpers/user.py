@@ -226,9 +226,9 @@ async def upload_telegram_file_to_minio_and_return_filename(update: Update, cont
         bio                   = in_memory
     )
 
-async def update_user_over_next_question_answer_and_get_curr_field(update: Update, context: ContextTypes.DEFAULT_TYPE,
+async def update_user_over_next_question_answer_and_get_curr_and_next_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
                                                     user: User, settings: Settings, session: AsyncSession,
-                                                    message_type: str) -> Field|None:
+                                                    message_type: str) -> tuple[Field|None, Field|None]:
     """
     Обновляет запись пользователя по логике получения следующего вопрос в ветке
     """
@@ -239,7 +239,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
     curr_field: Field|None = user.curr_field
 
     if not curr_field:
-        return None
+        return None, None
 
     if update.message.text == app.provider.config.i18n.defer:
         await update.message.reply_markdown(
@@ -255,7 +255,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
             )
         )
         await session.commit()
-        return
+        return None, None
     
     if message_type == 'text' and (curr_field.document_bucket or curr_field.image_bucket) and update.effective_message.text != app.provider.config.i18n.skip:
         await update.message.reply_markdown(
@@ -267,7 +267,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
             f"to question {curr_field.key=} with {curr_field.status=}, "
             f"but it was photo/document message and not skip button"
         ))
-        return None
+        return None, None
     
     if message_type == 'photo/document' and not (curr_field.document_bucket or curr_field.image_bucket):
         await update.message.reply_markdown(
@@ -279,7 +279,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
             f"to question {curr_field.key=} with {curr_field.status=}, "
             f"but it was text message and not skip button"
         ))
-        return None
+        return None, None
     
     curr_reply_message: ReplyableConditionMessage|None = user.curr_reply_message
     next_field = await get_next_field_question(session, curr_field) 
@@ -365,7 +365,7 @@ async def update_user_over_next_question_answer_and_get_curr_field(update: Updat
         .values(**user_update)
     )
 
-    return curr_field
+    return curr_field, next_field
 
 async def user_change_field_and_answer(update: Update, context: ContextTypes.DEFAULT_TYPE,
                                         user: User, settings: Settings, session: AsyncSession,
@@ -447,6 +447,9 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
     if curr_field and curr_field.validation_remove_regexp:
         user_field_value_data = re.sub(re.compile(curr_field.validation_remove_regexp), "", user_field_value_data)
     
+    if curr_field and curr_field.upper_before_save:
+        user_field_value_data = user_field_value_data.upper()
+    
     await update.message.reply_markdown(
         settings.user_change_message_reply_template.format(state = curr_field.key),
         reply_markup = await get_keyboard_of_user(session, user)
@@ -519,6 +522,8 @@ async def user_change_field_and_answer(update: Update, context: ContextTypes.DEF
             change_field_message_id = None
         )
     )
+
+    await user_set_fields_after_registration(update, context, user)
 
     return False
 
@@ -808,3 +813,35 @@ async def send_user_change_information(update: Update, context: ContextTypes.DEF
             for field in fields
         ])
     )
+
+async def user_set_fields_after_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User) -> None:
+    """Установить вычисляемые после регистрации пользователя поля"""
+    app: BBApplication = context.application
+    chat_id  = update.effective_user.id
+    username = update.effective_user.username
+    logger.info(f"Setting user after registration fields to user {chat_id=} {username=}")
+
+    async with app.provider.db_session() as session:
+        jinja2_after_user_registration_fields = await session.scalars(
+            select(Field).where(Field.status == FieldStatusEnum.JINJA2_FROM_USER_AFTER_REGISTRATION)
+        )
+
+        user_dict = user.to_plain_dict()
+
+        for field in jinja2_after_user_registration_fields:
+            logger.info(f"Setting user after registration field {field.key=} to user {chat_id=} {username=}")
+
+            field_value = Template(field.question_markdown).render(user = user_dict)
+
+            if field.validation_remove_regexp:
+                field_value = re.sub(re.compile(field.validation_remove_regexp), "", field_value)
+
+            await insert_or_update_user_field_value(
+                session=session,
+                user_id = user.id,
+                field_id = field.id,
+                value = field_value,
+                message_id = -1
+            )
+        
+        await session.commit()

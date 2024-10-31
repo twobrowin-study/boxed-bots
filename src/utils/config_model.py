@@ -203,6 +203,7 @@ class I18n(BaseModel, extra="forbid"):
     field_branch_normal:   str
     field_personal_notifiation: str
     field_jinja2_from_user_on_create: str
+    field_jinja2_from_user_after_registration: str
 
     order_place:       str
     branch_id:         str
@@ -302,6 +303,8 @@ class I18n(BaseModel, extra="forbid"):
 
     check_future_date: str
     check_future_year: str
+
+    upper_before_save: str
 
 class ConfigYaml(BaseSettings):
     """

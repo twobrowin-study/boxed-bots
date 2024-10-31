@@ -111,6 +111,7 @@ field_inactive: Не активен
 field_normal:   Активен
 field_personal_notifiation: С уведомлением о значении
 field_jinja2_from_user_on_create: Вычисляемое Jinja2 при создании пользователя
+field_jinja2_from_user_after_registration: Вычисляемое Jinja2 после окончания регистрации
 
 image:    Изображение
 document: Документ
@@ -205,3 +206,5 @@ news_tag: Теги новостей
 
 check_future_date: Проверка корректности даты
 check_future_year: Проверка корректности года
+
+upper_before_save: Преобразовать в верхний регистр

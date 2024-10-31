@@ -24,12 +24,13 @@ from bot.helpers.user import (
     get_user_by_chat_id_or_none,
     parse_start_help_commands_and_answer,
     create_new_user_and_answer,
-    update_user_over_next_question_answer_and_get_curr_field,
+    update_user_over_next_question_answer_and_get_curr_and_next_fields,
     answer_to_user_keyboard_key_hit,
     user_change_field_and_answer,
     upload_telegram_file_to_minio_and_return_filename,
     get_field_question_by_branch,
-    insert_or_update_user_field_value
+    insert_or_update_user_field_value,
+    user_set_fields_after_registration
 )
 from bot.helpers.keyboards import (
     construct_keyboard_reply,
@@ -123,18 +124,24 @@ async def user_message_text_handler(update: Update, context: ContextTypes.DEFAUL
         
             if curr_field and curr_field.validation_remove_regexp:
                 field_value = re.sub(re.compile(curr_field.validation_remove_regexp), "", field_value)
+            
+            if curr_field and curr_field.upper_before_save:
+                field_value = field_value.upper()
 
-        user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
-        if user_curr_field and not skip:
-            await insert_or_update_user_field_value(
-                session    = session,
-                user_id    = user.id,
-                field_id   = user_curr_field.id,
-                value      = field_value,
-                message_id = update.message.id
-            )
-            return await session.commit()
-        elif skip:
+        user_curr_field, user_next_field = await update_user_over_next_question_answer_and_get_curr_and_next_fields(update, context, user, settings, session, message_type)
+        if user_curr_field:
+            if not skip:
+                await insert_or_update_user_field_value(
+                    session    = session,
+                    user_id    = user.id,
+                    field_id   = user_curr_field.id,
+                    value      = field_value,
+                    message_id = update.message.id
+                )
+            
+            if not user_next_field:
+                await user_set_fields_after_registration(update, context, user)
+
             return await session.commit()
 
         keyboard_key = await answer_to_user_keyboard_key_hit(update, context, user, session)
@@ -177,18 +184,21 @@ async def user_message_photo_document_handler(update: Update, context: ContextTy
                 return
             return await session.commit()
         
-        user_curr_field = await update_user_over_next_question_answer_and_get_curr_field(update, context, user, settings, session, message_type)
-        if user_curr_field and update.message.text != app.provider.config.i18n.skip:
+        user_curr_field, user_next_field = await update_user_over_next_question_answer_and_get_curr_and_next_fields(update, context, user, settings, session, message_type)
+        if user_curr_field:
             full_filename = await upload_telegram_file_to_minio_and_return_filename(update, context, user, user_curr_field, settings, session)
-            await insert_or_update_user_field_value(
-                session    = session, 
-                user_id    = user.id,
-                field_id   = user_curr_field.id,
-                value      = full_filename,
-                message_id = update.message.id
-            )    
-            return await session.commit()
-        elif update.message.text == app.provider.config.i18n.skip:
+            if update.message.text != app.provider.config.i18n.skip:
+                await insert_or_update_user_field_value(
+                    session    = session,
+                    user_id    = user.id,
+                    field_id   = user_curr_field.id,
+                    value      = full_filename,
+                    message_id = update.message.id
+                )
+            
+            if not user_next_field:
+                await user_set_fields_after_registration(update, context, user)
+
             return await session.commit()
         
         logger.warning(f"Got unknown message from user {chat_id=} and {username=}")

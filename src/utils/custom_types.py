@@ -59,6 +59,9 @@ class FieldStatusEnum(Enum):
     JINJA2_FROM_USER_ON_CREATE = 'jinja2_from_user_on_create'
     """Вычисляемое поле при помощи Jinja2 на основе объекта-пользователя при его создании"""
 
+    JINJA2_FROM_USER_AFTER_REGISTRATION = 'jinja2_from_user_after_registration'
+    """Вычисляемое поле при помощи Jinja2 на основе объекта-пользователя после окончания регистрации"""
+
 class PersonalNotificationStatusEnum(Enum):
     """Статусы отправки индивидуальных уведомлений пользователям"""
     INACTIVE   = 'inactive'

@@ -106,6 +106,9 @@ class Field(Base):
     check_future_date: Mapped[bool] = mapped_column(default=False)
     check_future_year: Mapped[bool] = mapped_column(default=False)
 
+    upper_before_save: Mapped[bool] = mapped_column(default=False)
+    """Преобразовать в верхний регистр перед сохранением"""
+
 class ReplyableConditionMessage(Base):
     """
     Абстрактное сообщение, которое обладает настройками:
