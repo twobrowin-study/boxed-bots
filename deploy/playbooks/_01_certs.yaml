@@ -10,10 +10,30 @@
     - always
   roles:
     - role: bmstu.vats.init
-      vault_path_secrets: bmstu-alumni/data/main,secrets.yaml
 
 #############################################################################
-# 1a) Получение сертификатов с настройкой автоматического обновления        #
+# 1) Разместить на машине скрипт для копирования сертификатов в по сервисам #
+#############################################################################
+
+- name: Template copy services certs hook
+  hosts: obtain_certs
+  tags:
+    - always
+  become: true
+  tasks:
+    - name: Create letsencrypt hooks directory
+      file:
+        path: "{{ letsencrypt_post_hook_pathes }}"
+        state: directory
+    
+    - name: Template copy services certs hook
+      template:
+        src:  ../scripts/copy-services-certs.j2.sh
+        dest: "{{ letsencrypt_copy_services_certs }}"
+        mode: u=rwx,g=rx
+
+#############################################################################
+# 2a) Получение сертификатов с настройкой автоматического обновления        #
 #############################################################################
 
 - hosts: obtain_certs
@@ -37,11 +57,12 @@
           - "{{ secrets.server_name }}"
     certbot_create_standalone_stop_services:
       - docker
+    certbot_create_extra_args: "--deploy-hook {{ letsencrypt_copy_services_certs }}"
   roles:
     - geerlingguy.certbot
 
 #############################################################################
-# 1б) Сгенерировать сертификаты                                             #
+# 2б) Сгенерировать сертификаты                                             #
 #############################################################################
 
 - hosts: obtain_certs
@@ -49,30 +70,25 @@
     - generate_certs
   become: true
   vars:
-    cert_dir_path: "{{ letsencrypt_path }}/live/{{ secrets.server_name }}"
-    cert_key_path: "{{ cert_dir_path }}/privkey.pem"
-    cert_csr_path: "{{ cert_dir_path }}/csr.pem"
-    cert_pub_path: "{{ cert_dir_path }}/fullchain.pem"
-
     country_name: RU
     organization_name: BMSTU
   tasks:
     - name: Create certs dir
       file:
-        path: "{{ cert_dir_path }}"
+        path: "{{ certs_base_path }}"
         state: directory
 
     - name: Generate an OpenSSL private key
       openssl_privatekey:
-        path: "{{ cert_key_path }}"
+        path: "{{ certs.privkey_path }}"
         size: 4096
         type: RSA
         backup: yes
 
     - name: Generate an OpenSSL Certificate Signing Request with Subject information
       openssl_csr:
-        path: "{{ cert_csr_path }}"
-        privatekey_path: "{{ cert_key_path }}"
+        path: "{{ certs.csr_path }}"
+        privatekey_path: "{{ certs.privkey_path }}"
         country_name: "{{ country_name }}"
         organization_name: "{{ organization_name }}"
         email_address: "{{ secrets.admin_email }}"
@@ -80,7 +96,10 @@
 
     - name: Generate a Self Signed OpenSSL certificate
       openssl_certificate:
-        path: "{{ cert_pub_path }}"
-        privatekey_path: "{{ cert_key_path }}"
-        csr_path: "{{ cert_csr_path }}"
+        path: "{{ certs.fullchain_path }}"
+        privatekey_path: "{{ certs.privkey_path }}"
+        csr_path: "{{ certs.csr_path }}"
         provider: selfsigned
+    
+    - name: Run post generate hook - copy services certs
+      shell: "{{ letsencrypt_copy_services_certs }}"

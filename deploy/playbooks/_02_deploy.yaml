@@ -10,24 +10,9 @@
     - always
   roles:
     - role: bmstu.vats.init
-      vault_path_secrets: bmstu-alumni/data/main,secrets.yaml
 
 #############################################################################
-# 1) Доступ к сертификатам                                                  #
-#############################################################################
-
-- name: Copy nginx configs and htmls
-  hosts: managers
-  tasks:
-    - name: Add read permission on certs dir
-      become: yes
-      file:
-        name: "{{ letsencrypt_path }}"
-        mode: "u=rwX,g=rwX,o=rX"
-        recurse: yes
-
-#############################################################################
-# 2) Запуск сервиса                                                         #
+# 1) Запуск сервисов                                                        #
 #############################################################################
 
 - name: Run services
@@ -47,6 +32,13 @@
         keycloak_postgres: alumni
         bot:               alumni
         backup:            alumni
+      
+      ports:
+        http:  80
+        https: 443
+        minio_api: 9000
+        minio_ui:  9001
+        postgres:  5432
 
       stack_name:  "bmstu-alumni-bot"
       stack_prune: true

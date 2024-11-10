@@ -12,20 +12,12 @@ services:
     image: owasp/modsecurity-crs:4.2.0-nginx-alpine-202405060805
     logging: *default-logging
     ports:
-      - target:    80
-        published: 80
+      - target:    {{ ports.http }}
+        published: {{ ports.http }}
         protocol:  tcp
         mode:      host
-      - target:    443
-        published: 443
-        protocol:  tcp
-        mode:      host
-      - target:    9000
-        published: 9000
-        protocol:  tcp
-        mode:      host
-      - target:    9001
-        published: 9001
+      - target:    {{ ports.https }}
+        published: {{ ports.https }}
         protocol:  tcp
         mode:      host
     healthcheck:
@@ -37,7 +29,7 @@ services:
       - main
       - keycloak
     volumes:
-      - "{{ letsencrypt_path }}:{{ letsencrypt_path }}:ro"
+      - "{{ certs.services_dirs.proxy }}:/certs"
     configs:
       - source: nginx-default
         target: /etc/nginx/templates/conf.d/default.conf.template.conf
@@ -60,13 +52,11 @@ services:
       TZ: Europe/Moscow
       SERVER_NAME: "{{ secrets.server_name }}"
       
-      PORT_HTTP:      "80"
-      PORT_HTTPS:     "443"
-      PORT_MINIO_API: "9000"
-      PORT_MINIO_UI:  "9001"
+      PORT_HTTP:  "{{ ports.http }}"
+      PORT_HTTPS: "{{ ports.https }}"
 
-      SSL_CERT:     "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/fullchain.pem"
-      SSL_CERT_KEY: "{{ letsencrypt_path }}/live/{{ secrets.server_name }}/privkey.pem"
+      SSL_CERT:     "/certs/fullchain.pem"
+      SSL_CERT_KEY: "/certs/privkey.pem"
 
       NGINX_ENVSUBST_TEMPLATE_DIR:    "/etc/nginx/templates"
       NGINX_ENVSUBST_TEMPLATE_SUFFIX: ".template.conf"
@@ -94,8 +84,7 @@ services:
 
       KEYCLOAK_PASS:  "http://keycloak:8080"
       UI_PASS:        "http://bmstu-alumni:8080"
-      MINIO_API_PASS: "http://bmstu-alumni:9000"
-      MINIO_UI_PASS:  "http://bmstu-alumni:9001"
+      MINIO_API_PASS: "https://bmstu-alumni:9000"
     deploy:
       replicas: 1
       placement:
@@ -161,14 +150,28 @@ services:
     image: twobrowin/bmstu-alumni-bot:1.4.1
     logging: *default-logging
     ports:
+      - target:    9000
+        published: {{ ports.minio_api }}
+        protocol:  tcp
+        mode:      host
+      - target:    9001
+        published: {{ ports.minio_ui }}
+        protocol:  tcp
+        mode:      host
       - target:    5432
-        published: 5432
+        published: {{ ports.postgres }}
         protocol:  tcp
         mode:      host
     networks:
       - main
     volumes:
       - data:/var/opt/box-bot
+      
+      - "{{ certs.services_dirs.minio }}/fullchain.pem:/certs/minio/public.crt"
+      - "{{ certs.services_dirs.minio }}/privkey.pem:/certs/minio/private.key"
+
+      - "{{ certs.services_dirs.postgres }}/fullchain.pem:/certs/postgres/server.crt"
+      - "{{ certs.services_dirs.postgres }}/privkey.pem:/certs/postgres/server.key"
     environment:
       TZ: "Europe/Moscow"
       START_SERVICES: "true"
@@ -178,14 +181,17 @@ services:
       KEYCLOAK__REALM:  "{{ secrets.keycloak.realm }}"
       KEYCLOAK__CLIENT: "{{ secrets.keycloak.client }}"
       KEYCLOAK__SECRET: "{{ secrets.keycloak.secrets }}"
-      KEYCLOAK__VERIFY: "false"
+      KEYCLOAK__VERIFY: "true"
       
       TG_TOKEN: "{{ secrets.tg_api }}"
       
+      PG_SSL: "on"
+      PG_CERTDIR:  "/certs/postgres"
       PG_USER:     "{{ secrets.postgres.user }}"
       PG_PASSWORD: "{{ secrets.postgres.password }}"
       
-      MINIO_HOST: "localhost:9000"
+      MINIO_HOST: "{{ secrets.server_name }}:{{ ports.minio_api }}"
+      MINIO_CERTDIR: "/certs/minio"
       MINIO_ROOT_USER:     "{{ secrets.minio.user }}"
       MINIO_ROOT_PASSWORD: "{{ secrets.minio.password }}"
     deploy:
