@@ -63,13 +63,31 @@ docker-compose up
 ### Предвариательные требования
 
 Установить коллекцию vats:
+
 ```bash
 ansible-galaxy install -r deploy/requirements.yml
 ```
 
+Установка docker:
+
+```bash
+ansible-playbook deploy/playbooks/_00_docker.yaml -i deploy/inventory.yaml
+```
+
+Получение сертификатов:
+
+```bash
+# Генерирование сертификатов
+ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t generate_certs
+
+# Или
+
+# Автоматическое получение сертификатов Let`s Encrypt
+ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t obtain_certs
+```
+
 ### Доступ по ssh
 
-После подготовки возможно получить доступ к машинам при помощи команды:
 ```bash
 ansible -i deploy/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
 ```
@@ -77,11 +95,5 @@ ansible -i deploy/inventory.yaml all --module-name include_role --args name=bmst
 ### Запуск бота
 
 ```bash
-ansible-playbook deploy/playbook.yaml -i deploy/inventory.yaml -t deploy
-```
-
-### Добавление параметров Nginx
-
-```bash
-ansible-playbook deploy/playbook.yaml -i deploy/inventory.yaml -t nginx_config
+ansible-playbook deploy/playbooks/_02_deploy.yaml -i deploy/inventory.yaml
 ```

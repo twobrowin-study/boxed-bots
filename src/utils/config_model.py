@@ -20,6 +20,7 @@ class Keycloak(BaseModel, extra="forbid"):
     realm:  str
     client: str
     secret: SecretStr
+    verify: bool
 
 class DefaultValue(BaseModel, extra="forbid"):
     """

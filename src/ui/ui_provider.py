@@ -53,7 +53,8 @@ class UIProvider(BBProvider):
             server_url        = self.config.keycloak.url,
             realm_name        = self.config.keycloak.realm,
             client_id         = self.config.keycloak.client,
-            client_secret_key = self.config.keycloak.secret.get_secret_value()
+            client_secret_key = self.config.keycloak.secret.get_secret_value(),
+            verify            = self.config.keycloak.verify
         )
         
         self.oauth2_scheme = OAuth2AuthorizationCodeBearerOrCookie(

@@ -1,0 +1,43 @@
+---
+#############################################################################
+# 0) Взять секреты из vault и добавить SSH ключи в known_hosts              #
+#############################################################################
+
+- name: Pull secrets from vault
+  hosts: all
+  gather_facts: false
+  tags:
+    - always
+  roles:
+    - role: bmstu.vats.init
+
+#############################################################################
+# 1) Установка общесистемного ПО                                            #
+#############################################################################
+
+- name: Install docker and neccessary packages
+  hosts: all
+  tags:
+    - install_docker
+  roles:
+    - role: bmstu.vats.install_docker
+
+#############################################################################
+# 2) Инициализация Docker Swarm                                             #
+#############################################################################
+
+- name: Initialize docker swarm
+  hosts: managers
+  tags:
+    - docker_swarm
+  roles:
+    - role: bmstu.vats.docker_swarm
+      role_action: init
+
+- name: Join workers to the swarm
+  hosts: workers
+  tags:
+    - docker_swarm
+  roles:
+    - role: bmstu.vats.docker_swarm
+      role_action: join

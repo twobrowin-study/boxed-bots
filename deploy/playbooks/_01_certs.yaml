@@ -1,0 +1,86 @@
+---
+#############################################################################
+# 0) Взять секреты из vault и добавить SSH ключи в known_hosts              #
+#############################################################################
+
+- name: Pull secrets from vault
+  hosts: obtain_certs
+  gather_facts: false
+  tags:
+    - always
+  roles:
+    - role: bmstu.vats.init
+      vault_path_secrets: bmstu-alumni/data/main,secrets.yaml
+
+#############################################################################
+# 1a) Получение сертификатов с настройкой автоматического обновления        #
+#############################################################################
+
+- hosts: obtain_certs
+  tags:
+    - obtain_certs
+  become: true
+  vars:
+    certbot_install_method:    package
+    certbot_auto_renew:        yes
+    certbot_auto_renew_user:   "root"
+    certbot_auto_renew_hour:   "3"
+    certbot_auto_renew_minute: "30"
+    certbot_auto_renew_options: "--quiet"
+    certbot_create_if_missing: yes
+    certbot_create_method:     "standalone"
+    certbot_hsts:              yes
+    certbot_admin_email:       "{{ secrets.admin_email }}"
+    certbot_testmode:          no
+    certbot_certs:
+      - domains:
+          - "{{ secrets.server_name }}"
+    certbot_create_standalone_stop_services:
+      - docker
+  roles:
+    - geerlingguy.certbot
+
+#############################################################################
+# 1б) Сгенерировать сертификаты                                             #
+#############################################################################
+
+- hosts: obtain_certs
+  tags:
+    - generate_certs
+  become: true
+  vars:
+    cert_dir_path: "{{ letsencrypt_path }}/live/{{ secrets.server_name }}"
+    cert_key_path: "{{ cert_dir_path }}/privkey.pem"
+    cert_csr_path: "{{ cert_dir_path }}/csr.pem"
+    cert_pub_path: "{{ cert_dir_path }}/fullchain.pem"
+
+    country_name: RU
+    organization_name: BMSTU
+  tasks:
+    - name: Create certs dir
+      file:
+        path: "{{ cert_dir_path }}"
+        state: directory
+
+    - name: Generate an OpenSSL private key
+      openssl_privatekey:
+        path: "{{ cert_key_path }}"
+        size: 4096
+        type: RSA
+        backup: yes
+
+    - name: Generate an OpenSSL Certificate Signing Request with Subject information
+      openssl_csr:
+        path: "{{ cert_csr_path }}"
+        privatekey_path: "{{ cert_key_path }}"
+        country_name: "{{ country_name }}"
+        organization_name: "{{ organization_name }}"
+        email_address: "{{ secrets.admin_email }}"
+        common_name: "{{ secrets.server_name }}"
+
+    - name: Generate a Self Signed OpenSSL certificate
+      openssl_certificate:
+        path: "{{ cert_pub_path }}"
+        privatekey_path: "{{ cert_key_path }}"
+        csr_path: "{{ cert_csr_path }}"
+        provider: selfsigned
