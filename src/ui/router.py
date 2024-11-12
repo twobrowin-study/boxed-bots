@@ -417,7 +417,7 @@ async def fields(branch_id: int, request: Request) -> JSONResponse:
 
     logger.info(f"Got fields update request on branch {branch_id=} with {request_data=}")
 
-    fields_attrs, bad_responce = prepare_attrs_object_from_request(request_data, FieldStatusEnum, ['order_place'])
+    fields_attrs, bad_responce = prepare_attrs_object_from_request(request_data, FieldStatusEnum, ['order_place', 'report_order'])
     if bad_responce:
         return bad_responce
     

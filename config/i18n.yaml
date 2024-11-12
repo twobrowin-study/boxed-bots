@@ -208,3 +208,5 @@ check_future_date: Проверка корректности даты
 check_future_year: Проверка корректности года
 
 upper_before_save: Преобразовать в верхний регистр
+
+report_order: Номер в отчёте пропусков

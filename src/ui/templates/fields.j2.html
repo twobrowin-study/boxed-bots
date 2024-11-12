@@ -37,6 +37,7 @@
         <th id="fields-check_future_year">{{ i18n.check_future_year }}</th>
         <th id="fields-upper_before_save">{{ i18n.upper_before_save }}</th>
         <th id="fields-is_boolean"       >{{ i18n.is_boolean }}</th>
+        <th id="fields-report_order"     >{{ i18n.report_order }}</th>
         <th id="fields-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
@@ -105,6 +106,7 @@
                 <option value="true"  {% if     field.is_boolean %}selected='true'{% endif %}>{{ i18n.yes }}</option>
             </select>
           </td>
+          <td id="fields-{{ field.id }}-report_order" class="row-editable" style="white-space: pre-line">{% if field.report_order %}{{ field.report_order }}{% endif %}</td>
           <td id="fields-{{ field.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}
@@ -166,6 +168,7 @@
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
+        <td id="fields-new-report_order" class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-edit" class="table-info"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>

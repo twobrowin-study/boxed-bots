@@ -306,6 +306,7 @@ class I18n(BaseModel, extra="forbid"):
     check_future_year: str
 
     upper_before_save: str
+    report_order: str
 
 class ConfigYaml(BaseSettings):
     """

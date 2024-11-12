@@ -213,7 +213,7 @@ async def group_download_submited_key_handler(update: Update, context: ContextTy
             .order_by(User.id.asc())
         )
         users_df = pd.DataFrame([
-            user.to_plain_dict(i18n=app.provider.config.i18n)
+            user.to_plain_dict(i18n=app.provider.config.i18n, only_ordered_report=True)
             for user in users_selected.scalars()
         ])
 
@@ -364,7 +364,6 @@ async def group_upload_aproved_passes_xlsx_document_handler(update: Update, cont
     logger.debug(f"Passes df:\n{passes_df}")
 
     pass_field_key = settings.pass_user_field
-    name_field_key = settings.user_document_name_field
 
     to_save_selector = (
         passes_df[pass_field_key].isin(context.chat_data['zip_photos']) &
@@ -376,12 +375,12 @@ async def group_upload_aproved_passes_xlsx_document_handler(update: Update, cont
     passes_not_to_save_df = passes_df.loc[~to_save_selector]
     
     if not passes_not_to_save_df.empty:
-        would_not_be_safe = "\n".join(passes_not_to_save_df[name_field_key].values)
+        would_not_be_safe = "\n".join(passes_not_to_save_df["id"].values.astype(str))
         await update.effective_message.reply_markdown(
             f"{app.provider.config.i18n.would_not_be_safe}\n\n{would_not_be_safe}"
         )
 
-    logger.debug(f"Qrs to be saved df:\n{passes_to_save_df[["id", name_field_key]]}")
+    logger.debug(f"Qrs to be saved df:\n{passes_not_to_save_df[["id"]]}")
 
     async with app.provider.db_session() as session:
         for _,row in passes_to_save_df.iterrows():
@@ -426,7 +425,7 @@ async def group_upload_aproved_passes_xlsx_document_handler(update: Update, cont
         
         await session.commit()
         
-    done_names = "\n".join(passes_to_save_df[name_field_key].values)
+    done_names = "\n".join(passes_to_save_df["id"].values.astype(str))
     await update.effective_message.reply_markdown(
         f"{app.provider.config.i18n.send_approved_done}\n\n{done_names}",
         reply_markup=ReplyKeyboardMarkup([

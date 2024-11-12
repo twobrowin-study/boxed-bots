@@ -109,6 +109,9 @@ class Field(Base):
     upper_before_save: Mapped[bool] = mapped_column(default=False)
     """Преобразовать в верхний регистр перед сохранением"""
 
+    report_order: Mapped[int|None] = mapped_column(default=None, unique=True)
+    """Порядок отображения поля в отчёте, для попадания в отчёт должно быть больше 1"""
+
 class ReplyableConditionMessage(Base):
     """
     Абстрактное сообщение, которое обладает настройками:
@@ -227,30 +230,40 @@ class User(Base):
     pass_change_field_message_id: Mapped[int|None] = mapped_column(nullable=True, default=None, type_=BigInteger)
     """Id сообщения, в котором пользователь на данный момент менят данные для получения пропуска"""
 
-    def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None) -> dict[str, str]:
+    def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None, only_ordered_report: bool = False) -> dict[str, str]:
         """
         Преобразовать в плоский словарь для табличной выгрузки
         * branch_id: int = None - указывает ветку пользователей по которой нужно выполнить преобразование
         * i18n: I18n = None - Данные для перевода булевых значений
+        * only_ordered_report: bool = False - Возвращать только данные отсортированный по отчёту
         """
         user_dict: dict[str, str] = {
             'id':       self.id,
             'chat_id':  self.chat_id,
             'username': self.username
-        }
-        fields_dict: dict[str, UserFieldDataPlain] = {}
+        } if not only_ordered_report else {'id': self.id}
+        fields_dict: dict[str|int, UserFieldDataPlain] = {}
         for field_value in self.fields_values:
             field_value: UserFieldValue
             field: Field = field_value.field
-            if not branch_id or field.branch_id == branch_id:
+            
+            check_if_field_in_branch: bool = (not branch_id or field.branch_id == branch_id)
+            check_if_field_in_report: bool = (not only_ordered_report or field.report_order and field.report_order >= 1)
+            if check_if_field_in_branch and check_if_field_in_report:
                 value = field_value.value
                 if field.is_boolean and i18n:
                     if value == 'true':
                         value = i18n.yes
                     elif value == 'false':
                         value = i18n.no
+
+                if not only_ordered_report:
+                    field_order_key = f"{field.branch_id}_{field.order_place}"
+                else:
+                    field_order_key = field.report_order
+                
                 fields_dict |= {
-                    f"{field.branch_id}_{field.order_place}": UserFieldDataPlain(
+                    field_order_key: UserFieldDataPlain(
                         key   = field.key,
                         value = value
                     )
