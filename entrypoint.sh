@@ -27,11 +27,12 @@ exec start-stop-daemon --start --chuid "${PG_USER}:${PG_USER}" --exec "${PG_BIND
 ########################################
 # MINIO: launch
 ########################################
-echo "Starting MINIO ${MINIO_RELEASE}..."
 if [ ! -z ${MINIO_CERTDIR} ]; then
   MINIO_CERT_COMAND="--certs-dir ${MINIO_CERTDIR}"
 fi
-exec start-stop-daemon --start --chuid "${MINIO_USER}:${MINIO_USER}" --exec "${MINIO_BINARY}" -- server ${MINIO_DATADIR} --console-address ":9001" ${MINIO_CERT_COMAND} &
+MINIO_PARAMS="server ${MINIO_DATADIR} --address :9000 --console-address :9001 ${MINIO_CERT_COMAND}"
+echo "Starting MINIO ${MINIO_RELEASE} with params ${MINIO_PARAMS}..."
+exec start-stop-daemon --start --chuid "${MINIO_USER}:${MINIO_USER}" --exec "${MINIO_BINARY}" -- ${MINIO_PARAMS} &
 
 if [ "${START_SERVICES}" = "true" ]; then
   ########################################

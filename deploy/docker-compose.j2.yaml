@@ -147,7 +147,7 @@ services:
           - node.hostname == {{ placement.keycloak_postgres }}
 
   bmstu-alumni:
-    image: twobrowin/bmstu-alumni-bot:1.5.9
+    image: twobrowin/bmstu-alumni-bot:1.5.18
     logging: *default-logging
     ports:
       - target:    9000
@@ -190,7 +190,10 @@ services:
       PG_USER:     "{{ secrets.postgres.user }}"
       PG_PASSWORD: "{{ secrets.postgres.password }}"
       
-      MINIO_HOST: "{{ secrets.server_name }}:{{ ports.minio_api }}"
+      MINIO_HOST:                 "{{ secrets.server_name }}:{{ ports.minio_api }}"
+      MINIO_SERVER_URL:           "https://{{ secrets.server_name }}:{{ ports.minio_api }}"
+      MINIO_BROWSER_REDIRECT_URL: "https://{{ secrets.server_name }}:{{ ports.minio_ui }}"
+
       MINIO_CERTDIR: "/certs/minio"
       MINIO_ROOT_USER:     "{{ secrets.minio.user }}"
       MINIO_ROOT_PASSWORD: "{{ secrets.minio.password }}"
