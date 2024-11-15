@@ -70,7 +70,10 @@ def prepare_attrs_object_from_request(
         for key, value in plain_obj.items():
             if key in numeric_keys:
                 try:
-                    obj[key] = int(value)
+                    if value == "":
+                        obj[key] = None
+                    else:
+                        obj[key] = int(value)
                 except Exception:
                     logger.warning(f"Got value error as {key=} should be numeric but gor {value=}")
                     return {}, bad_responce
