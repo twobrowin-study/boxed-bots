@@ -687,7 +687,8 @@ async def answer_to_user_keyboard_key_hit(update: Update, context: ContextTypes.
     return None
 
 async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                 user: User, branch_id: int, session: AsyncSession, send_documents_and_photos: bool = True) -> tuple[list[Field], dict[int, UserFieldDataPrepared]]:
+                                 user: User, branch_id: int, session: AsyncSession,
+                                 send_photos: bool = True, send_documents: bool = False) -> tuple[list[Field], dict[int, UserFieldDataPrepared]]:
     """Получает информацию о пользователе по нажатию кнопкии "Обо мне" или "Изменить профиль"""""
     app: BBApplication = context.application
     chat_id  = update.effective_user.id
@@ -712,16 +713,17 @@ async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
             )
             continue
         
-        if user_fields[field.id].document_bucket and send_documents_and_photos:
+        if user_fields[field.id].document_bucket and send_documents:
             logger.info(f"Trying to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             if update.message:
                 try:
+                    filename = user_fields[field.id].value
                     bio, _ = await app.provider.minio.download(
                         user_fields[field.id].document_bucket,
-                        user_fields[field.id].value
+                        filename
                     )
-                    await update.message.reply_document(bio)
+                    await update.message.reply_document(bio, filename=filename)
                 except Exception:
                     logger.warning('Was not able to send document on ME key hit to user {chat_id=} {username=} for field {field.id=}')
 
@@ -732,7 +734,7 @@ async def get_user_me_fields(update: Update, context: ContextTypes.DEFAULT_TYPE,
             )
             continue
 
-        if user_fields[field.id].image_bucket and send_documents_and_photos:
+        if user_fields[field.id].image_bucket and send_photos:
             logger.info(f"Trying to send image on ME key hit to user {chat_id=} {username=} for field {field.id=}")
             
             if update.message:

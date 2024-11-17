@@ -1,6 +1,6 @@
 services:
   box-bot:
-    image: twobrowin/bmstu-alumni-bot:1.5.19
+    image: twobrowin/bmstu-alumni-bot:1.5.21
     build:
      context: .
     ports:
