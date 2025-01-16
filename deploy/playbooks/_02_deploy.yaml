@@ -1,0 +1,45 @@
+---
+#############################################################################
+# 0) Взять секреты из vault и добавить SSH ключи в known_hosts              #
+#############################################################################
+
+- name: Pull secrets from vault
+  hosts: all
+  gather_facts: false
+  tags:
+    - always
+  roles:
+    - role: bmstu.vats.init
+
+#############################################################################
+# 1) Запуск сервисов                                                        #
+#############################################################################
+
+- name: Run services
+  hosts: managers
+  roles:
+    - role: bmstu.vats.generic_deploy
+      compose_template_path: ../docker-compose.j2.yaml
+
+      fileglobs:
+        - "../nginx/*.conf"
+        - "../modsecurity/*.conf"
+        - "../scripts/*.sh"
+      
+      placement:
+        nginx:             alumni
+        keycloak:          alumni
+        keycloak_postgres: alumni
+        bot:               alumni
+        backup:            alumni
+      
+      ports:
+        http:  80
+        https: 443
+        minio_api: 9000
+        minio_ui:  9001
+        postgres:  5432
+
+      stack_name:  "bmstu-alumni-bot"
+      stack_prune: true
+      workdir:     "{{ home }}/bmstu-alumni-bot"

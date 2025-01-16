@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   box-bot:
-    image: twobrowin/box-bot:1.6.0
+    image: twobrowin/bmstu-alumni-bot:1.5.21
     build:
      context: .
     ports:

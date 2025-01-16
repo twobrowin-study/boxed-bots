@@ -1,0 +1,32 @@
+all:
+  hosts:
+    alumni:
+  vars:
+    vault_path_inventory: bmstu-alumni/data/main,inventory-secrets.yaml
+    vault_path_secrets:   bmstu-alumni/data/main,secrets.yaml
+
+    swarm_manager_host: alumni
+    home: "/home/{{ ansible_user }}"
+
+    letsencrypt_path: "/etc/letsencrypt"
+    letsencrypt_post_hook_pathes:    "{{ letsencrypt_path }}/renewal-hooks/deploy"
+    letsencrypt_copy_services_certs: "{{ letsencrypt_post_hook_pathes }}/copy-services-certs"
+    
+    certs_base_path:  "{{ letsencrypt_path }}/live/{{ secrets.server_name }}"
+    certs:
+      privkey_path:   "{{ certs_base_path }}/privkey.pem"
+      csr_path:       "{{ certs_base_path }}/csr.pem"
+      fullchain_path: "{{ certs_base_path }}/fullchain.pem"
+
+      services_dirs:
+        proxy:    "{{ home }}/bmstu-alumni-bot/certs/proxy"
+        minio:    "{{ home }}/bmstu-alumni-bot/certs/minio"
+        postgres: "{{ home }}/bmstu-alumni-bot/certs/postgres"
+
+managers:
+  hosts:
+    alumni:
+
+obtain_certs:
+  hosts:
+    alumni:

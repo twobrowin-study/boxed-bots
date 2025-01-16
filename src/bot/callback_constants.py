@@ -39,3 +39,26 @@ class UserFastAnswerReplyCallback:
     """Шаблон данных"""
     PATTERN  = 'fast_answer_[0-9]+|[0-9]+|[0-9]+'
     """Паттерн регулярног выражения"""
+
+class UserSubmitPassCallback:
+    """Тип данных для регистрации кнопки отправки заявки на qr код"""
+    PATTERN = 'submit_pass'
+    STATE_SUBMIT_AWAIT = 1
+
+class UserChangePassFieldCallback:
+    """Тип данных для регистрации кнопок изменения состояния пользователей для получения пропуска"""
+    PREFIX   = 'user_pass_field_change_'
+    """Префикс"""
+    TEMPLATE = 'user_pass_field_change_{field_id}'
+    """Шаблон данных"""
+    PATTERN  = 'user_pass_field_change_[0-9]+'
+    """Паттерн регулярног выражения"""
+
+class UserHelpQrCallback:
+    """Тип данных для регистрации кнопки получения помощи с qr кодом"""
+    PATTERN = 'qr_help'
+
+class GroupApprovePassesConversation:
+    """Тип данных для регистрации статусов выгрузки таблицы пользователей с подтверждёнными пропусками"""
+    ZIP_AWAIT = 1
+    XLSX_AWAIT = 2

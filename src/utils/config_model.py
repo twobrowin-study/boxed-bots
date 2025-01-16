@@ -20,6 +20,7 @@ class Keycloak(BaseModel, extra="forbid"):
     realm:  str
     client: str
     secret: SecretStr
+    verify: bool
 
 class DefaultValue(BaseModel, extra="forbid"):
     """
@@ -57,6 +58,7 @@ class Defaults(BaseModel, extra="forbid"):
     strange_user_error:   DefaultValue
     edited_message_reply: DefaultValue
     error_reply:          DefaultValue
+    file_too_large_reply: DefaultValue
 
     help_normal_group:     DefaultValue
     help_admin_group:      DefaultValue
@@ -69,6 +71,23 @@ class Defaults(BaseModel, extra="forbid"):
     
     report_send_every_x_active_users:       DefaultValue
     report_currently_active_users_template: DefaultValue
+
+    pass_user_field:                      DefaultValue
+    user_field_to_request_pass:           DefaultValue
+    pass_message:                         DefaultValue
+    pass_removed_message:                 DefaultValue
+    pass_hint_message:                    DefaultValue
+    pass_add_field_to_request_value:      DefaultValue
+    pass_not_yet_approved_message:        DefaultValue
+    pass_submit_message:                  DefaultValue
+    pass_submitted_message:               DefaultValue
+    pass_submited_superadmin_j2_template: DefaultValue
+
+    personal_notification_jinja_template: DefaultValue
+    expired_promocodes_jinja_template:    DefaultValue
+    avaliable_promocodes_jinja_template:  DefaultValue
+
+    number_of_last_news_to_show: DefaultValue
 
     def model_dump_anythig(self, what_to_dump: str) -> dict[str, str]:
         full_dump: dict[str, dict[str, str]] = self.model_dump()
@@ -150,10 +169,11 @@ class I18n(BaseModel, extra="forbid"):
     status:      str
     description: str
 
-    group_inactive:    str
-    group_normal:      str
-    group_admin:       str
-    group_super_admin: str
+    group_inactive:     str
+    group_normal:       str
+    group_admin:        str
+    group_super_admin:  str
+    group_news_channel: str
 
     keyboard_keys: str
 
@@ -162,10 +182,15 @@ class I18n(BaseModel, extra="forbid"):
     text_markdown: str
     photo_link:    str
 
-    keyboard_key_inactive: str
-    keyboard_key_normal:   str
-    keyboard_key_deferred: str
-    keyboard_key_me:       str
+    keyboard_key_inactive:   str
+    keyboard_key_normal:     str
+    keyboard_key_deferred:   str
+    keyboard_key_me:         str
+    keyboard_key_pass:       str
+    keyboard_key_news:       str
+    keyboard_key_back:       str
+    keyboard_key_me_change:  str
+    keyboard_key_promocodes: str
 
     field_branches: str
     fields:         str
@@ -177,6 +202,9 @@ class I18n(BaseModel, extra="forbid"):
 
     field_branch_inactive: str
     field_branch_normal:   str
+    field_personal_notifiation: str
+    field_jinja2_from_user_on_create: str
+    field_jinja2_from_user_after_registration: str
 
     order_place:       str
     branch_id:         str
@@ -223,6 +251,62 @@ class I18n(BaseModel, extra="forbid"):
     defered: str
 
     download_file: str
+
+    parent_key_id: str
+
+    change: str
+    append: str
+
+    personal_notification_inactive: str
+    personal_notification_to_deliver: str
+    personal_notification_delivered: str
+
+    promocodes: str
+
+    promocode_active:   str
+    promocode_expired:  str
+    promocode_inactive: str
+
+    source:      str
+    value:       str
+    description: str
+    expire_at:   str
+
+    validation_regexp:         str
+    validation_error_markdown: str
+    validation_remove_regexp:  str
+    is_skippable:              str
+
+    cancel: str
+    skip:   str
+    change_canceled: str
+
+    help_pass:     str
+    submit_pass:   str
+    confirm_pass:  str
+    pass_canceled: str
+
+    download_submited: str
+    send_approved:     str
+    submitted_empty:   str
+
+    send_approved_zip_photos: str
+    send_approved_zip_photos_done: str
+    send_approved_to_send:  str
+    send_approved_canceled: str
+    would_not_be_safe:      str
+    send_approved_done:     str
+
+    photo_bucket:   str
+    photo_filename: str
+
+    news_tag: str
+
+    check_future_date: str
+    check_future_year: str
+
+    upper_before_save: str
+    report_order: str
 
 class ConfigYaml(BaseSettings):
     """

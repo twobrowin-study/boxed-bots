@@ -23,7 +23,10 @@ from utils.custom_types import (
     NotificationStatusEnum,
     UserFieldDataPlain,
     UserFieldDataPrepared,
-    UserDataPrepared
+    UserDataPrepared,
+    PersonalNotificationStatusEnum,
+    PromocodeStatusEnum,
+    PassSubmitStatus
 )
 from utils.config_model import I18n
 
@@ -94,6 +97,21 @@ class Field(Base):
     document_bucket:   Mapped[str|None] = mapped_column(default=None)
     is_boolean:        Mapped[bool]     = mapped_column(default=False)
 
+    validation_regexp: Mapped[str|None] = mapped_column(default=None)
+    validation_error_markdown: Mapped[str|None] = mapped_column(default=None)
+    validation_remove_regexp: Mapped[str|None] = mapped_column(default=None)
+
+    is_skippable: Mapped[bool] = mapped_column(default=False)
+    
+    check_future_date: Mapped[bool] = mapped_column(default=False)
+    check_future_year: Mapped[bool] = mapped_column(default=False)
+
+    upper_before_save: Mapped[bool] = mapped_column(default=False)
+    """Преобразовать в верхний регистр перед сохранением"""
+
+    report_order: Mapped[int|None] = mapped_column(default=None, unique=True)
+    """Порядок отображения поля в отчёте, для попадания в отчёт должно быть больше 1"""
+
 class ReplyableConditionMessage(Base):
     """
     Абстрактное сообщение, которое обладает настройками:
@@ -121,6 +139,13 @@ class ReplyableConditionMessage(Base):
 
     text_markdown: Mapped[str]      = mapped_column(nullable=False)
     photo_link:    Mapped[str|None] = mapped_column(nullable=True, default=None)
+
+    photo_bucket:   Mapped[str|None] = mapped_column(default=None)
+    """Бакет, в котором хранится фото, отправляемое вместе с сообщением"""
+    photo_filename: Mapped[str|None] = mapped_column(default=None)
+    """Название фото в хранилище S3"""
+    photo_file_id:  Mapped[str|None] = mapped_column(default=None)
+    """Id файла фото в telegram"""
 
     condition_bool_field_id: Column[int|None] = Column(Integer, ForeignKey(Field.id), nullable=True)
     """
@@ -185,7 +210,7 @@ class User(Base):
 
     fields_values = relationship('UserFieldValue', backref='user', lazy='selectin')
 
-    change_field_message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
+    change_field_message_id: Mapped[int|None] = mapped_column(nullable=True, default=None, type_=BigInteger)
     deferred_field_id: Column[int|None] = Column(Integer, ForeignKey(Field.id), nullable=True)
     """Id отложенного пользователем поля"""
     deferred_field = relationship('Field', lazy='selectin', foreign_keys=deferred_field_id)
@@ -196,30 +221,49 @@ class User(Base):
     curr_reply_message = relationship('ReplyableConditionMessage', lazy='selectin')
     """Сообщения, на которое на данный момент отвечает пользователь"""
 
-    def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None) -> dict[str, str]:
+    curr_keyboard_key_parent_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
+    """Id родительской кнопки последней клавиши, на которую нажал пользователь"""
+
+    pass_status: Mapped[PassSubmitStatus] = mapped_column(default=PassSubmitStatus.NOT_SUBMITED)
+    """Статус обработки пропуска"""
+
+    pass_change_field_message_id: Mapped[int|None] = mapped_column(nullable=True, default=None, type_=BigInteger)
+    """Id сообщения, в котором пользователь на данный момент менят данные для получения пропуска"""
+
+    def to_plain_dict(self, branch_id: int|None = None, i18n: I18n|None = None, only_ordered_report: bool = False) -> dict[str, str]:
         """
         Преобразовать в плоский словарь для табличной выгрузки
         * branch_id: int = None - указывает ветку пользователей по которой нужно выполнить преобразование
         * i18n: I18n = None - Данные для перевода булевых значений
+        * only_ordered_report: bool = False - Возвращать только данные отсортированный по отчёту
         """
         user_dict: dict[str, str] = {
             'id':       self.id,
             'chat_id':  self.chat_id,
             'username': self.username
-        }
-        fields_dict: dict[str, UserFieldDataPlain] = {}
+        } if not only_ordered_report else {'id': self.id}
+        fields_dict: dict[str|int, UserFieldDataPlain] = {}
         for field_value in self.fields_values:
             field_value: UserFieldValue
             field: Field = field_value.field
-            if not branch_id or field.branch_id == branch_id:
+            
+            check_if_field_in_branch: bool = (not branch_id or field.branch_id == branch_id)
+            check_if_field_in_report: bool = (not only_ordered_report or field.report_order and field.report_order >= 1)
+            if check_if_field_in_branch and check_if_field_in_report:
                 value = field_value.value
                 if field.is_boolean and i18n:
                     if value == 'true':
                         value = i18n.yes
                     elif value == 'false':
                         value = i18n.no
+
+                if not only_ordered_report:
+                    field_order_key = f"{field.branch_id}_{field.order_place}"
+                else:
+                    field_order_key = field.report_order
+                
                 fields_dict |= {
-                    f"{field.branch_id}_{field.order_place}": UserFieldDataPlain(
+                    field_order_key: UserFieldDataPlain(
                         key   = field.key,
                         value = value
                     )
@@ -246,7 +290,8 @@ class User(Base):
                 field_value.field_id: UserFieldDataPrepared(
                     value = field_value.value,
                     document_bucket = field.document_bucket,
-                    image_bucket    = field.image_bucket
+                    image_bucket    = field.image_bucket,
+                    personal_notification_status = field_value.personal_notification_status
                 )
             }
         return fields
@@ -264,10 +309,13 @@ class UserFieldValue(Base):
     field_id = Column(Integer, ForeignKey(Field.id), nullable=False)
 
     value: Mapped[str] = mapped_column(nullable=False)
+    value_file_id: Mapped[str|None] = mapped_column()
     
     message_id: Mapped[int] = mapped_column(nullable=True, default=None, type_=BigInteger)
 
     field = relationship('Field', lazy='selectin')
+
+    personal_notification_status: Mapped[PersonalNotificationStatusEnum] = mapped_column(nullable=True, default=None)
 
 class KeyboardKey(Base):
     """
@@ -287,6 +335,12 @@ class KeyboardKey(Base):
 
     branch_id = Column(Integer, ForeignKey(FieldBranch.id), nullable=True)
     """Id Ветки, на основе которой отображаются данные для модификации или возврата при статусе KeyboardKeyStatusEnum.ME"""
+
+    parent_key_id: Mapped[int|None] = mapped_column(ForeignKey("keyboard_keys.id"), default=None)
+    """Id клавиши, которая является родительской для данной кнопки"""
+
+    news_tag: Mapped[str|None] = mapped_column(default=None)
+    """Тег новости, по которому будет выполнен поиск новостей"""
 
 class Notification(Base):
     """
@@ -347,6 +401,7 @@ class Settings(Base):
     strange_user_error:   Mapped[str] = mapped_column(nullable=False)
     edited_message_reply: Mapped[str] = mapped_column(nullable=False)
     error_reply:          Mapped[str] = mapped_column(nullable=False)
+    file_too_large_reply: Mapped[str] = mapped_column(nullable=False)
     
     help_normal_group:     Mapped[str] = mapped_column(nullable=False)
     help_admin_group:      Mapped[str] = mapped_column(nullable=False)
@@ -360,3 +415,65 @@ class Settings(Base):
     report_send_every_x_active_users:       Mapped[str] = mapped_column(nullable=False)
     report_currently_active_users_template: Mapped[str] = mapped_column(nullable=False)
     
+    pass_user_field: Mapped[str] = mapped_column()
+    """Название ветки и пользовательского поля, содержащего пропуск"""
+    user_field_to_request_pass: Mapped[str] = mapped_column()
+    """Необязательно по умолчанию поле, необходимое для получения пропуска"""
+    pass_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое вместе с пропуском пользователя"""
+    pass_removed_message: Mapped[str] = mapped_column()
+    """Сообщение, высылаемое в случае если запланирована доставка сообщения с пропуском, но пропуска нет"""
+    pass_hint_message: Mapped[str] = mapped_column()
+    """Сообщение помощи пользователю о регистрации пропуска"""
+    pass_add_field_to_request_value: Mapped[str] = mapped_column()
+    """Сообщение, отправляемое в случае если невозможно отправить запрос на формирование пропуска поскольку не заполнено поле, необходимое для получения пропуска"""
+    pass_not_yet_approved_message: Mapped[str] = mapped_column()
+    """Сообщение, посылаемое если пользователю ещё не выдан пропуск"""
+    pass_submit_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю при начале отправки заявки на пропуск"""
+    pass_submitted_message: Mapped[str] = mapped_column()
+    """Сообщение высылаемое пользователю после подтверждения отправки заявки на пропуск"""
+    pass_submited_superadmin_j2_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения, отправляемого суперадминистраторам при отправке пользователем заявки на qr код"""
+
+    personal_notification_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения, высылаемого как персональное уведомление для пользователя"""
+    expired_promocodes_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения о просроченных промокодах"""
+    avaliable_promocodes_jinja_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения о доступных промокодах"""
+
+    number_of_last_news_to_show: Mapped[str] = mapped_column()
+    """Количество последних показываемых новостей"""
+
+class NewsPost(Base):
+    """Класс новостных сообщений"""
+
+    __tablename__ = "news_posts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    """Уникальный идентификатор"""
+    chat_id: Mapped[int] = mapped_column(nullable=False, index=False, unique=False, type_=BigInteger)
+    """Уникальный идентификатор канала новостей"""
+    message_id: Mapped[int] = mapped_column(nullable=False, index=False, unique=True, type_=BigInteger)
+    """Уникальный идентификатор сообщения новостей"""
+    tags: Mapped[str|None] = mapped_column(default=None)
+    """Теги сообщения"""
+
+class Promocode(Base):
+    """Доступные промокоды"""
+
+    __tablename__ = "promocodes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    """Уникальный идентификатор"""
+    status: Mapped[PromocodeStatusEnum] = mapped_column()
+    """Статус промокода"""
+    source: Mapped[str] = mapped_column()
+    """Источник промокода - организация"""
+    value: Mapped[str] = mapped_column()
+    """Значение промокода"""
+    description: Mapped[str|None] = mapped_column()
+    """Описание промокода"""
+    expire_at: Mapped[datetime|None] = mapped_column()
+    """Время окончания действия промокода"""

@@ -70,7 +70,10 @@ def prepare_attrs_object_from_request(
         for key, value in plain_obj.items():
             if key in numeric_keys:
                 try:
-                    obj[key] = int(value)
+                    if value == "":
+                        obj[key] = None
+                    else:
+                        obj[key] = int(value)
                 except Exception:
                     logger.warning(f"Got value error as {key=} should be numeric but gor {value=}")
                     return {}, bad_responce
@@ -85,7 +88,7 @@ def prepare_attrs_object_from_request(
                 elif 'id_value' in value:
                     obj[key] = None if value['id_value'] == 'None' else int(value['id_value'])
                 elif 'date_value' in value:
-                    obj[key] = None if value['date_value'] == 'None' else datetime.fromisoformat(value['date_value'])
+                    obj[key] = None if value['date_value'] in ['', None, 'None'] else datetime.fromisoformat(value['date_value'])
                 else:
                     obj[key] = None if value['value'] == 'None' else status_type(**value)
             else:

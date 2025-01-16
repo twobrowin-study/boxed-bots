@@ -17,12 +17,14 @@ class UIKeycloak:
                  server_url: str,
                  realm_name: str,
                  client_id: str,
-                 client_secret_key: str|None = None) -> None:
+                 client_secret_key: str|None = None,
+                 verify: bool = False) -> None:
         self.keycloak_openid = KeycloakOpenID(
             server_url=server_url,
             realm_name=realm_name,
             client_id=client_id,
-            client_secret_key=client_secret_key
+            client_secret_key=client_secret_key,
+            verify=verify
         )
         self.public_key = ("-----BEGIN PUBLIC KEY-----\n" +
                            self.keycloak_openid.public_key() +

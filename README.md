@@ -1,4 +1,4 @@
-# Бот в коробке
+# Бот клуба выпускников МГТУ
 
 Это телеграм бот, который поставляется в одном контейнере с UI администратора, postgres и minio для хранения данных
 
@@ -6,11 +6,7 @@
 
 Для запуска приложения потребуется иметь отдельно активированный и настроенный Keycloak для работы с UI администратора.
 
-Требуется создать два клиента:
-
-* Открытый, используемый для доступа к HTML страницам
-
-* Закрытый, используемый для доступа к API
+Требуется создать клиент с авторизацией.
 
 Для локальной отладки можно воспользоваться реалмом, сохранёнными в директории `keycloak`. В нём следует создать собственного пользователя, дополнительные настройки для него не нужны.
 
@@ -19,8 +15,7 @@
 ## Сборка контейнера
 
 ```bash
-docker-compose build
-docker-compose push
+docker compose build --push
 ```
 
 ## Локальная сборка и отладка
@@ -61,4 +56,44 @@ python src/bot/main.py
 
 ```bash
 docker-compose up
+```
+
+## Развёртывание
+
+### Предвариательные требования
+
+Установить коллекцию vats:
+
+```bash
+ansible-galaxy install -r deploy/requirements.yml
+```
+
+Установка docker:
+
+```bash
+ansible-playbook deploy/playbooks/_00_docker.yaml -i deploy/inventory.yaml
+```
+
+Получение сертификатов:
+
+```bash
+# Генерирование сертификатов
+ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t generate_certs
+
+# Или
+
+# Автоматическое получение сертификатов Let`s Encrypt
+ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t obtain_certs
+```
+
+### Доступ по ssh
+
+```bash
+ansible -i deploy/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
+```
+
+### Запуск бота
+
+```bash
+ansible-playbook deploy/playbooks/_02_deploy.yaml -i deploy/inventory.yaml
 ```

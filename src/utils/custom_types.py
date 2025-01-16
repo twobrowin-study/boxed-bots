@@ -19,7 +19,6 @@ class GroupStatusEnum(Enum):
     """
     Статус группы для управления доступом
     """
-    INACTIVE    = 'inactive'    # Не актвная группа
     NORMAL      = 'normal'      # Обычная группа
     ADMIN       = 'admin'       # Группа администраторов:
                                 #  - приходят оповещения об отправке уведомлений
@@ -27,27 +26,47 @@ class GroupStatusEnum(Enum):
     SUPER_ADMIN = 'super_admin' # Группа суперадминистраторов, помимо функций обычных администраторов:
                                 #  - приходят уведомления о запланированных уведомлениях
                                 #  - приходят уведомления об ошибках в боте
+    
+    NEWS_CHANNEL = 'news_channel'
+    """Новостной канал из которого будут пересланы сообщения"""
+
+    INACTIVE    = 'inactive'    # Не актвная группа
 
 class UserStatusEnum(Enum):
     """
     Статус пользователей
     """
-    INACTIVE = 'inactive' # Не актвный пользователь
     ACTIVE   = 'active'   # Обычный пользователь
+    INACTIVE = 'inactive' # Не актвный пользователь
 
 class FieldBranchStatusEnum(Enum):
     """
     Статус поля пользователя 
     """
-    INACTIVE   = 'inactive' # Не активная ветка
     NORMAL     = 'normal'   # Нормальная ветка
+    INACTIVE   = 'inactive' # Не активная ветка
 
 class FieldStatusEnum(Enum):
     """
     Статус поля пользователя 
     """
-    INACTIVE   = 'inactive' # Не актвное поле
     NORMAL     = 'normal'   # Нормальный вопрос
+    INACTIVE   = 'inactive' # Не актвное поле
+
+    PERSONAL_NOTIFICATION = 'personal_notifiation'
+    """Индивилуальное уведомление пльзователя"""
+
+    JINJA2_FROM_USER_ON_CREATE = 'jinja2_from_user_on_create'
+    """Вычисляемое поле при помощи Jinja2 на основе объекта-пользователя при его создании"""
+
+    JINJA2_FROM_USER_AFTER_REGISTRATION = 'jinja2_from_user_after_registration'
+    """Вычисляемое поле при помощи Jinja2 на основе объекта-пользователя после окончания регистрации"""
+
+class PersonalNotificationStatusEnum(Enum):
+    """Статусы отправки индивидуальных уведомлений пользователям"""
+    INACTIVE   = 'inactive'
+    TO_DELIVER = 'to_deliver'
+    DELIVERED  = 'delivered'
 
 class ReplyTypeEnum(Enum):
     """
@@ -57,15 +76,31 @@ class ReplyTypeEnum(Enum):
     FULL_TEXT_ANSWER = 'full_text_answer'
     FAST_ANSWER      = 'fast_answer'
     
-    
 class KeyboardKeyStatusEnum(Enum):
     """
     Статус кнопки на клавиатуре
     """
-    INACTIVE = 'inactive' # Не актвная клавиша - не отображается
     NORMAL   = 'normal'   # Обычная клавиша
+
+    BACK = 'back'
+    """Вернуться на меню выше"""
+
     DEFERRED = 'deferred' # Вернуться к отложенному вопросу - отображается только когда у пользователя заполненно поле отложенного вопроса
     ME       = 'me'       # Посмотреть свою пользовательскую запись (основные и откладываемые вопросы)
+
+    ME_CHANGE = 'me_change'
+    """Изменение параметров регистрации"""
+    
+    PASS = 'pass'
+    """Показать пропуск пользователя"""
+
+    NEWS = 'news'
+    """Отобразить новости сообщества"""
+
+    PROMOCODES = 'promocodes'
+    """Отобразить доступные промокоды"""
+
+    INACTIVE = 'inactive' # Не актвная клавиша - не отображается
 
 class NotificationStatusEnum(Enum):
     """
@@ -76,6 +111,18 @@ class NotificationStatusEnum(Enum):
     PLANNED    = 'planned'
     DELIVERED  = 'delivered'
 
+class PromocodeStatusEnum(Enum):
+    """Статус промокодов"""
+    ACTIVE   = 'active'
+    EXPIRED  = 'expired'
+    INACTIVE = 'inactive'
+
+class PassSubmitStatus(Enum):
+    """Статус выдачи QR кодов"""
+    NOT_SUBMITED = 'not_submited'
+    SUBMITED     = 'submited'
+    APPROVED     = 'approved'
+
 class UserFieldDataPlain(NamedTuple):
     key:   str
     value: str
@@ -84,6 +131,8 @@ class UserFieldDataPrepared(NamedTuple):
     value: str
     document_bucket: str
     image_bucket:    str
+    empty: bool = False
+    personal_notification_status: PersonalNotificationStatusEnum|None = None
 
 class UserDataPrepared(NamedTuple):
     id:       int

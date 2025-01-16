@@ -1,0 +1,11 @@
+collections:
+  - name: https://vats_requirements:<TOKEN>@gitlab.bmstu.ru/infra/vats.git
+    type: git
+    version: main
+  
+  - name: community.general
+  - name: community.crypto
+
+roles:
+  - name: geerlingguy.certbot
+    version: 5.2.0

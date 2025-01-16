@@ -28,13 +28,18 @@
       {{ i18n.download_users_report }}
     </a>
   </div>
-  <table id="users-table" class="table table-striped">
+  <table id="users-table" class="table table-hover table-striped">
     <thead>
       <tr>
         <th>{{ i18n.chat_id }}</th>
         <th>{{ i18n.username }}</th>
+        <th>{{ user_document_name_field }}</th>
         {% for field in fields %}
-          <th id='fields-{{ field.id }}'>
+          <th id='fields-{{ field.id }}'
+            {% if field.status == field_status_personal_notification %}
+              colspan="2"
+            {% endif %}
+          >
             {{ field.key }}
             {% if curr_field_branch.is_ui_editable %}
               &nbsp;
@@ -49,19 +54,29 @@
         <tr id="users-{{ user.id }}">
           <td id="users-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
           <td id="users-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
+          <td id="users-{{ user.id }}-user_document_name_field">{% if user.fields[user_document_name_field_id] and user.fields[user_document_name_field_id].value %}{{ user.fields[user_document_name_field_id].value }} {% endif %}</td>
           {% for field in fields %}
+            {% if field.status == field_status_personal_notification %}
+              <td id='users-{{ user.id }}-fields-{{ field.id }}-personal_notification_status'>
+                {% if field.id in user.fields and user.fields[field.id].personal_notification_status %}
+                  {{ i18n['personal_notification_' + user.fields[field.id].personal_notification_status.value] }}
+                {% else %}
+                  {{ i18n.personal_notification_inactive }}
+                {% endif %}
+              </td>
+            {% endif %}
             <td id='users-{{ user.id }}-fields-{{ field.id }}'
               {% if curr_field_branch.is_ui_editable %}
                 class='col-editable fields-{{ field.id }}'
               {% endif %}
             >
-              {% if field.is_boolean %}
+              {%- if field.is_boolean -%}
                   <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
                     <option value="false" {% if field.id not in user.fields or  user.fields[field.id].value == 'false' %}selected='true'{% endif %}>{{ i18n.no  }}</option>
                     <option value="true"  {% if field.id     in user.fields and user.fields[field.id].value == 'true'  %}selected='true'{% endif %}>{{ i18n.yes }}</option>
                   </select>
-              {% elif field.id in user.fields %}
-                {% if field.image_bucket %}
+              {%- elif field.id in user.fields -%}
+                {%- if field.image_bucket and not curr_field_branch.is_ui_editable -%}
                   <img
                     id='users-{{ user.id }}-fields-{{ field.id }}-image'
                     class="img-thumbnail"
@@ -69,19 +84,20 @@
                     style="max-height: 200px; max-width: 200px;"
                     src="{{ uri_prefix }}/minio/{{ user.fields[field.id].image_bucket }}/{{ user.fields[field.id].value }}"
                   />
-                {% elif field.document_bucket %}
+                {%- elif field.document_bucket -%}
                   <a
                     id='users-{{ user.id }}-fields-{{ field.id }}-document'
                     class="btn btn-sm btn-primary"
                     target="_blank"
                     href="{{ uri_prefix }}/minio/{{ user.fields[field.id].document_bucket }}/{{ user.fields[field.id].value }}"
+                    download
                   >
                       {{ i18n.download_file }} {{ user.fields[field.id].value }}
                   </a>
-                {% else %}
+                {%- else -%}
                   <span style="white-space: pre-line">{{ user.fields[field.id].value }}</span>
-                {% endif %}
-              {% endif %}
+                {%- endif -%}
+              {%- endif -%}
             </td>
           {% endfor %}
         </tr>

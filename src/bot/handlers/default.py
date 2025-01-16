@@ -105,6 +105,11 @@ async def eddited_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     Обработчик изменённых сообщений - вовращает стандартную ошибку
     """
     app: BBApplication = context.application
+
+    if update.edited_channel_post:
+        logger.warning(f"Got eddited channel post... ignoring")
+        return
+
     chat_id  = update.effective_user.id
     username = update.effective_user.username
 
