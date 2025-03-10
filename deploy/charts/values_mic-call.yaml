@@ -1,0 +1,65 @@
+uiContainer:
+  image: twobrowin/boxed-bots-ui:2.0.2
+  imagePullPolicy: IfNotPresent
+  containerPort: 8080
+
+botContainer:
+  image: twobrowin/boxed-bots-bot:2.0.2
+  imagePullPolicy: IfNotPresent
+
+containers:
+  env:
+  - name: TZ
+    value: Europe/Moscow
+  
+  - name: PATH_SECURE
+    value: "true"
+  - name: PATH_PREFIX
+    value: 
+
+  - name: TG_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: mic-call
+        key: tg_token
+
+  - name: POSTGRES_HOST
+    value: postgres.boxed-bots.ru:5432
+  - name: POSTGRES_DB
+    value: mic-call
+  - name: POSTGRES_USER
+    value: mic-call
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mic-call
+        key: postgres_password
+
+  - name: MINIO_HOST
+    value: minio.boxed-bots.ru:443
+  - name: MINIO_SECURE
+    value: "true"
+  - name: MINIO_ACCESS_KEY
+    value: CWxXTSp8qMEc7cmGAPDo
+  - name: MINIO_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: mic-call
+        key: minio_secret_key
+
+  - name: KEYCLOAK_URL
+    value: https://keycloak.boxed-bots.ru
+  - name: KEYCLOAK_REALM
+    value: master
+  - name: KEYCLOAK_CLIENT
+    value: mic-call
+  - name: KEYCLOAK_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: mic-call
+        key: keycloak_secret
+  - name: KEYCLOAK_VERIFY
+    value: "true"
+
+ingress:
+  host: mic-call.boxed-bots.ru

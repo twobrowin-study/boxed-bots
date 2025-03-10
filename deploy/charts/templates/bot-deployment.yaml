@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-bot
+  namespace: {{ .Release.Namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-bot
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-bot
+
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-bot
+        image: {{ .Values.botContainer.image }}
+        imagePullPolicy: {{ .Values.botContainer.imagePullPolicy }}
+
+        env:
+        {{ .Values.containers.env | toYaml | nindent 8 | trim }}

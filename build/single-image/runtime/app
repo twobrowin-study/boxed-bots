@@ -1,0 +1,13 @@
+#!/bin/bash
+
+app=$1
+pre_timout=$2
+
+sleep $pre_timout
+
+while :; do
+    cd ${APP_HOME}
+    source ${VIRTUAL_ENV}/bin/activate
+    ${VIRTUAL_ENV}/bin/python3 -um src.$1.main
+    sleep 3
+done

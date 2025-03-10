@@ -4,7 +4,7 @@
   <table id="notifications-table" class="table table-striped align-middle">
     <thead>
       <tr>
-        <th id="notifications-notify_date"               >{{ i18n.notify_date }}</th>
+        <th id="notifications-schedule_datetime"         >{{ i18n.schedule_datetime }}</th>
         <th id="notifications-status"                    >{{ i18n.status }}</th>
         <th id="notifications-reply_condition_message_id">{{ i18n.reply_condition_message_id }}</th>
         <th id="notifications-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
@@ -13,7 +13,9 @@
     <tbody>
       {% for notification in notifications %}
         <tr id="notifications-{{ notification.id }}">
-          <td id="notifications-{{ notification.id }}-notify_date-date_value" class="row-editable">{{ notification.notify_date }}</td>
+          <td id="notifications-{{ notification.id }}-schedule_datetime" class="row-editable">
+            <input type="datetime-local" id="notifications-{{ notification.id }}-schedule_datetime-date_value" class="form-control" disabled value="{{ notification.schedule_datetime }}"/>
+          </td>
           <td id="notifications-{{ notification.id }}-status" class="row-editable">
             <select id="notifications-{{ notification.id }}-status-value" class="form-select" disabled>
               {% for status in notification_status_enum %}
@@ -42,15 +44,17 @@
         </tr>
       {% endfor %}
       <tr id="notifications-new" class="elem-new d-none">
-        <td id="notifications-new-notify_date-date_value" class="row-editable table-info" contenteditable="true"></td>
-        <td id="notifications-new-status" class="row-editable table-info">
+        <td id="notifications-new-schedule_datetime" class="row-editable row-new-value table-info">
+          <input type="datetime-local" id="notifications-new-schedule_datetime-date_value" class="form-control"/>
+        </td>
+        <td id="notifications-new-status" class="row-editable row-new-value table-info">
           <select id="notifications-new-status-value" class="form-select">
             {% for status in notification_status_enum %}
               <option value="{{ status.value }}">{{ i18n['notification_' + status.value] }}</option>
             {% endfor %}
           </select>
         </td>
-        <td id="notifications-new-reply_condition_message_id" class="row-editable table-info">
+        <td id="notifications-new-reply_condition_message_id" class="row-editable row-new-value table-info">
           <select id="notifications-new-reply_condition_message_id-id_value" class="form-select">
             <option value="None">{{ i18n.none }}</option>
               {% for replyable_condition_message in replyable_condition_messages %}

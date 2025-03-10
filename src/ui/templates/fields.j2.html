@@ -18,33 +18,35 @@
     </a>
     {% endfor %}
   </div>
-  <table id="fields-table" class="table table-striped align-middle">
+  <table id="fields-table" class="table table-striped align-middle" style="width: 170% !important">
     <thead>
       <tr>
-        <th id="fields-key"              >{{ i18n.key }}</th>
-        <th id="fields-status"           >{{ i18n.status }}</th>
-        <th id="fields-order_place"      >{{ i18n.order_place }}</th>
-        <th id="fields-branch_id"        >{{ i18n.branch_id }}</th>
-        <th id="fields-question_markdown">{{ i18n.question_markdown }}</th>
-        <th id="fields-validation_regexp">{{ i18n.validation_regexp }}</th>
-        <th id="fields-validation_error_markdown">{{ i18n.validation_error_markdown }}</th>
-        <th id="fields-validation_remove_regexp">{{ i18n.validation_remove_regexp }}</th>
-        <th id="fields-answer_options"   >{{ i18n.answer_options }}</th>
-        <th id="fields-image_bucket"     >{{ i18n.image_bucket }}</th>
-        <th id="fields-document_bucket"  >{{ i18n.document_bucket }}</th>
-        <th id="fields-is_skippable"     >{{ i18n.is_skippable }}</th>
-        <th id="fields-check_future_date">{{ i18n.check_future_date }}</th>
-        <th id="fields-check_future_year">{{ i18n.check_future_year }}</th>
-        <th id="fields-upper_before_save">{{ i18n.upper_before_save }}</th>
-        <th id="fields-is_boolean"       >{{ i18n.is_boolean }}</th>
-        <th id="fields-report_order"     >{{ i18n.report_order }}</th>
+        <th id="fields-key"                             >{{ i18n.key }}</th>
+        <th id="fields-status"                          >{{ i18n.status }}</th>
+        <th id="fields-type"                            >{{ i18n.type }}</th>
+        <th id="fields-order_place"                     >{{ i18n.order_place }}</th>
+        <th id="fields-branch_id"                       >{{ i18n.branch_id }}</th>
+        <th id="fields-question_markdown_or_j2_template">{{ i18n.question_markdown_or_j2_template }}</th>
+        <th id="fields-type_error_markdown"             >{{ i18n.type_error_markdown }}</th>
+        <th id="fields-validation_regexp"               >{{ i18n.validation_regexp }}</th>
+        <th id="fields-validation_remove_regexp"        >{{ i18n.validation_remove_regexp }}</th>
+        <th id="fields-validation_error_markdown"       >{{ i18n.validation_error_markdown }}</th>
+        <th id="fields-answer_options"                  >{{ i18n.answer_options }}</th>
+        <th id="fields-bucket"                          >{{ i18n.bucket }}</th>
+        <th id="fields-is_skippable"                    >{{ i18n.is_skippable }}</th>
+        <th id="fields-check_future_date"               >{{ i18n.check_future_date }}</th>
+        <th id="fields-check_future_year"               >{{ i18n.check_future_year }}</th>
+        <th id="fields-upper_before_save"               >{{ i18n.upper_before_save }}</th>
+        <th id="fields-report_order"                    >{{ i18n.report_order }}</th>
         <th id="fields-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
     <tbody>
       {% for field in fields %}
         <tr id="fields-{{ field.id }}">
-          <td id="fields-{{ field.id }}-key" class="row-editable">{{ field.key }}</td>
+          <td id="fields-{{ field.id }}-key" class="row-editable">
+            <input type="text" id="fields-{{ field.id }}-key" class="form-control" disabled value="{{ field.key }}"/>
+          </td>
           <td id="fields-{{ field.id }}-status" class="row-editable">
             <select id="fields-{{ field.id }}-status-value" class="form-select" disabled>
               {% for status in field_status_enum %}
@@ -57,7 +59,21 @@
               {% endfor %}
             </select>
           </td>
-          <td id="fields-{{ field.id }}-order_place" class="row-editable" style="white-space: pre-line">{{ field.order_place }}</td>
+          <td id="fields-{{ field.id }}-type" class="row-editable">
+            <select id="fields-{{ field.id }}-type-value" class="form-select" disabled>
+              {% for type in field_type_enum %}
+                <option
+                  value="{{ type.value }}"
+                  {% if type == field.type %}selected='true'{% endif %}
+                >
+                  {{ i18n['field_type_' + type.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td id="fields-{{ field.id }}-order_place" class="row-editable">
+            <input type="number" id="fields-{{ field.id }}-order_place" class="form-control should-reload-page-on-change" disabled value="{{ field.order_place }}"/>
+          </td>
           <td id="fields-{{ field.id }}-branch_id" class="row-editable">
             <select id="fields-{{ field.id }}-branch_id-id_value" class="form-select" disabled>
                 {% for field_branch in field_branches %}
@@ -69,13 +85,27 @@
                 {% endfor %}
             </select>
           </td>
-          <td id="fields-{{ field.id }}-question_markdown" class="row-editable" style="white-space: pre-line">{% if field.question_markdown %}{{ field.question_markdown }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-validation_regexp" class="row-editable" style="white-space: pre-line">{% if field.validation_regexp %}{{ field.validation_regexp }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-validation_error_markdown" class="row-editable" style="white-space: pre-line">{% if field.validation_error_markdown %}{{ field.validation_error_markdown }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-validation_remove_regexp"  class="row-editable" style="white-space: pre-line">{% if field.validation_remove_regexp %}{{ field.validation_remove_regexp }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-answer_options"    class="row-editable" style="white-space: pre-line">{% if field.answer_options %}{{ field.answer_options }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-image_bucket"      class="row-editable" style="white-space: pre-line">{% if field.image_bucket %}{{ field.image_bucket }}{% endif %}</td>
-          <td id="fields-{{ field.id }}-document_bucket"   class="row-editable" style="white-space: pre-line">{% if field.document_bucket %}{{ field.document_bucket }}{% endif %}</td>
+          <td id="fields-{{ field.id }}-question_markdown_or_j2_template" class="row-editable">
+            <textarea id="fields-{{ field.id }}-question_markdown_or_j2_template" class="form-control" rows="4" cols="40" disabled>{{ field.question_markdown_or_j2_template or '' }}</textarea>
+          </td>
+          <td id="fields-{{ field.id }}-type_error_markdown" class="row-editable">
+            <textarea id="fields-{{ field.id }}-type_error_markdown" class="form-control" rows="4" cols="40" disabled>{{ field.type_error_markdown or '' }}</textarea>
+          </td>
+          <td id="fields-{{ field.id }}-validation_regexp" class="row-editable">
+            <input type="text" id="fields-{{ field.id }}-validation_regexp" class="form-control" disabled value="{{ field.validation_regexp or '' }}"/>
+          </td>
+          <td id="fields-{{ field.id }}-validation_remove_regexp" class="row-editable">
+            <input type="text" id="fields-{{ field.id }}-validation_remove_regexp" class="form-control" disabled value="{{ field.validation_remove_regexp or '' }}"/>
+          </td>
+          <td id="fields-{{ field.id }}-validation_error_markdown" class="row-editable">
+            <textarea id="fields-{{ field.id }}-validation_error_markdown" class="form-control" rows="4" cols="40" disabled>{{ field.validation_error_markdown or '' }}</textarea>
+          </td>
+          <td id="fields-{{ field.id }}-answer_options" class="row-editable">
+            <textarea id="fields-{{ field.id }}-answer_options" class="form-control" rows="4" cols="40" disabled>{{ field.answer_options or '' }}</textarea>
+          </td>
+          <td id="fields-{{ field.id }}-bucket" class="row-editable">
+            <input type="text" id="fields-{{ field.id }}-bucket" class="form-control" disabled value="{{ field.bucket or '' }}"/>
+          </td>
           <td id="fields-{{ field.id }}-is_skippable" class="row-editable">
             <select id="fields-{{ field.id }}-is_skippable-bool_value" class="form-select" disabled>
                 <option value="false" {% if not field.is_skippable %}selected='true'{% endif %}>{{ i18n.no  }}</option>
@@ -100,27 +130,34 @@
                 <option value="true"  {% if     field.upper_before_save %}selected='true'{% endif %}>{{ i18n.yes }}</option>
             </select>
           </td>
-          <td id="fields-{{ field.id }}-is_boolean" class="row-editable">
-            <select id="fields-{{ field.id }}-is_boolean-bool_value" class="form-select" disabled>
-                <option value="false" {% if not field.is_boolean %}selected='true'{% endif %}>{{ i18n.no  }}</option>
-                <option value="true"  {% if     field.is_boolean %}selected='true'{% endif %}>{{ i18n.yes }}</option>
-            </select>
+          <td id="fields-{{ field.id }}-report_order" class="row-editable">
+            <input type="number" id="fields-{{ field.id }}-report_order" class="form-control" disabled value="{{ field.report_order or '' }}"/>
           </td>
-          <td id="fields-{{ field.id }}-report_order" class="row-editable" style="white-space: pre-line">{% if field.report_order %}{{ field.report_order }}{% endif %}</td>
           <td id="fields-{{ field.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}
       <tr id="fields-new" class="elem-new d-none">
-        <td id="fields-new-key" class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-status" class="row-editable table-info">
+        <td id="fields-new-key" class="row-editable row-new-value table-info">
+          <input type="text" id="fields-new-key" class="form-control"/>
+        </td>
+        <td id="fields-new-status" class="row-editable row-new-value table-info">
           <select id="fields-new-status-value" class="form-select">
             {% for status in field_status_enum %}
               <option value="{{ status.value }}">{{ i18n['field_' + status.value] }}</option>
             {% endfor %}
           </select>
         </td>
-        <td id="fields-new-order_place" class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-branch_id" class="row-editable table-info">
+        <td id="fields-new-type" class="row-editable row-new-value table-info">
+          <select id="fields-new-type-value" class="form-select">
+            {% for type in field_type_enum %}
+              <option value="{{ type.value }}">{{ i18n['field_type_' + type.value] }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td id="fields-new-order_place" class="row-editable row-new-value table-info">
+          <input type="number" id="fields-new-order_place" class="form-control should-reload-page-on-change" value="{% if fields %}{{ fields[-1].order_place + 1 }}{% else %}{{ 1 }}{% endif %}"/>
+        </td>
+        <td id="fields-new-branch_id" class="row-editable row-new-value table-info">
           <select id="fields-new-branch_id-id_value" class="form-select">
               {% for field_branch in field_branches %}
                 <option value="{{ field_branch.id }}"
@@ -131,44 +168,54 @@
               {% endfor %}
           </select>
         </td>
-        <td id="fields-new-question_markdown" class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-validation_regexp" class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-validation_error_markdown" class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-validation_remove_regexp"  class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-answer_options"    class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-image_bucket"      class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-document_bucket"   class="row-editable table-info" contenteditable="true"></td>
-        <td id="fields-new-is_skippable" class="row-editable table-info">
+        <td id="fields-new-question_markdown_or_j2_template" class="row-editable row-new-value table-info">
+          <textarea id="fields-new-question_markdown_or_j2_template" class="form-control" rows="4" cols="40"></textarea>
+        </td>
+        <td id="fields-new-type_error_markdown" class="row-editable row-new-value table-info">
+          <textarea id="fields-new-type_error_markdown" class="form-control" rows="4" cols="40"></textarea>
+        </td>
+        <td id="fields-new-validation_regexp" class="row-editable row-new-value table-info">
+          <input type="text" id="fields-new-validation_regexp" class="form-control"/>
+        </td>
+        <td id="fields-new-validation_remove_regexp" class="row-editable row-new-value table-info">
+          <input type="text" id="fields-new-validation_remove_regexp" class="form-control"/>
+        </td>
+        <td id="fields-new-validation_error_markdown" class="row-editable row-new-value table-info">
+          <textarea id="fields-new-validation_error_markdown" class="form-control" rows="4" cols="40"></textarea>
+        </td>
+        <td id="fields-new-answer_options" class="row-editable row-new-value table-info">
+          <textarea id="fields-new-answer_options" class="form-control" rows="4" cols="40"></textarea>
+        </td>
+        <td id="fields-new-bucket" class="row-editable row-new-value table-info">
+          <input type="text" id="fields-new-bucket" class="form-control"/>
+        </td>
+        <td id="fields-new-is_skippable" class="row-editable row-new-value table-info">
           <select id="fields-new-is_skippable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="fields-new-check_future_date" class="row-editable table-info">
+        <td id="fields-new-check_future_date" class="row-editable row-new-value table-info">
           <select id="fields-new-check_future_date-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="fields-new-check_future_year" class="row-editable table-info">
+        <td id="fields-new-check_future_year" class="row-editable row-new-value table-info">
           <select id="fields-new-check_future_year-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="fields-new-upper_before_save" class="row-editable table-info">
+        <td id="fields-new-upper_before_save" class="row-editable row-new-value table-info">
           <select id="fields-new-upper_before_save-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="fields-new-is_boolean" class="row-editable table-info">
-          <select id="fields-new-is_boolean-bool_value" class="form-select">
-              <option value="false">{{ i18n.no  }}</option>
-              <option value="true" >{{ i18n.yes }}</option>
-          </select>
+        <td id="fields-new-report_order" class="row-editable row-new-value table-info">
+          <input type="number" id="fields-new-report_order" class="form-control"/>
         </td>
-        <td id="fields-new-report_order" class="row-editable table-info" contenteditable="true"></td>
         <td id="fields-new-edit" class="table-info"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>

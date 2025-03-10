@@ -1,15 +1,5 @@
 [tool.poetry]
-name = "box-bot"
-version = "1.0.0"
-description = "Телеграм бот в коробочке для регистрации пользователей"
-authors = ["Egor Dubrovin <dubrovinen@bmstu.ru>", "Daria Stepanova", "Ilya Reznikov", "Andrey Grishenko", "Sergey Kuznetsov", "Dmitry Radonezky"]
-license = "MIT"
-readme = "README.md"
-packages = [
-    { include = "bot", from = "src" },
-    { include = "ui", from = "src" },
-    { include = "utils", from = "src" },
-]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12.2"
@@ -44,3 +34,52 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.uv.sources]
 asyncpg = { git = "https://github.com/MagicStack/asyncpg"}
+
+### Ruff ###
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120  # 100 или 120
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "E501",  # Line too long
+  "D",  # pydocstyle
+  "S",  # flake8-bandit
+  "W",  # pycodestyle warnings (покрываются форматированием)
+  "EM", "TRY003",  # Передача строк в конструктор исключений
+  "TD", "FIX",  # flake8-todos, flake8-fixme
+  "TCH",  # flake8-type-checking
+  "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+  "RUF001", "RUF002", "RUF003",  # ambiguous character warnings (Не работают с кириллицей)
+  "COM812", "ISC001",  # following rules may cause conflicts when used with the formatter
+  "PGH003",  # Use specific rule codes when ignoring type issues
+  "BLE001",  # Do not catch blind exception: `Exception`
+  "ERA",  # Found commented-out code
+  "PLR0913",  # Too many arguments in function definition
+  "PLR2004",  # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/**/*.py" = [
+  "INP", "E402"
+]
+"*.ipynb" = [
+  "PLE1142",  # Checks for uses of await outside of async functions
+  "T201",  # Checks for print statements
+]
+
+### Pyrgiht ###
+
+[tool.pyright]
+exclude = [".venv/", "**/__pycache__", ".*cache*/", "__*/", "alembic/versions/"]
+venvPath = "."
+venv = ".venv"
+
+# typeCheckingMode = "strict"  # Строгий режим не нужно соблюдать постоянно, но полезно иногда включать и проверять
+
+reportUnnecessaryTypeIgnoreComment = true
+reportMissingTypeArgument = true
+reportUnnecessaryComparison = true
+reportUnnecessaryContains = true

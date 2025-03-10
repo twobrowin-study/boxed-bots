@@ -9,9 +9,14 @@
       .container {
         max-width: 90% !important;
       }
+      textarea {
+        resize: none !important;
+      }
     </style>
     <script src="{{ uri_prefix }}/assets/js/jquery-3.7.1.min.js"></script>
+    <script src="{{ uri_prefix }}/assets/js/js.cookie.min.js.js"></script>
     <script src="{{ uri_prefix }}/assets/js/table-edit-actions.js"></script>
+    <script src="{{ uri_prefix }}/assets/js/api-functions.js"></script>
   </head>
   <body>
     <div id="content" class="container">
@@ -38,6 +43,9 @@
       {% block content %}{% endblock %}
       <div id='there-was-en-error' class="alert alert-danger d-none" role="alert">
         {{ i18n.there_was_en_error }}
+      </div>
+      <div id='error-could-not-restore-previous-api-call' class="alert alert-danger d-none" role="alert">
+        {{ i18n.error_could_not_restore_previous_api_call }}
       </div>
     </div>
   </body>

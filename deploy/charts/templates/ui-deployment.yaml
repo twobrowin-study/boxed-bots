@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ui
+  namespace: {{ .Release.Namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-ui
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-ui
+
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-ui
+        image: {{ .Values.uiContainer.image }}
+        imagePullPolicy: {{ .Values.uiContainer.imagePullPolicy }}
+
+        env:
+        {{ .Values.containers.env | toYaml | nindent 8 | trim }}
+
+        ports:
+        - containerPort: {{ .Values.uiContainer.containerPort }}
+          name: service

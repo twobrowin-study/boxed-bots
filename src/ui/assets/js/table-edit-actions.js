@@ -1,3 +1,18 @@
+/// HELPER FUNCTION: Split element`s id and make it nested objects
+/// e.g. element with id settings-bot_my_name_plain-value and text 'value' would be
+/// {settings: {bot_my_name_plain: {value: 'value'}}}
+function set_request_data_from_id(id, set_value, curr_request_data) {
+    id.split('-').forEach((value, index, array) => {
+        if (index === array.length-1) {
+            curr_request_data[value] = set_value
+            return;
+        }
+        if (Object.hasOwn(curr_request_data, value) === false) {
+            curr_request_data[value] = {};
+        }
+        curr_request_data = curr_request_data[value];
+    })
+}
 
 /////////
 /// Row edit and save button actions
@@ -18,19 +33,12 @@ $(() => {
         /// Get row and tds to eddit
         const row = button.parent().parent()
         const editable_tds = row.children('.row-editable');
-
-        /// Get all of table data cells witch are avaliable to eddit as text
-        const editable_text_tds = row.children('.row-editable:not(:has(>select))');
-
-        /// Get all of table data wuth selects witch are avalibale to choose
-        const editable_select_tds = row.children('.row-editable:has(>select)');
-        const editable_selects    = editable_select_tds.children('select');
+        const editable_inputs = editable_tds.children(':input');
 
         /// If action is to start an eddit - start an eddit
         if (button_edit_action) {
             editable_tds.addClass('table-info');
-            editable_text_tds.attr('contenteditable', 'true');
-            editable_selects.removeAttr('disabled');
+            editable_inputs.removeAttr('disabled');
 
             /// Replace new button with close button
             const close_button = $('.row-new, .row-close');
@@ -51,86 +59,30 @@ $(() => {
         /// If action is to save - parse data and make ajax call to an api
         if (button_save_action) {
             editable_tds.removeClass('table-info');
-            editable_text_tds.attr('contenteditable', 'false');
-            editable_selects.attr('disabled', 'disabled');
+            editable_inputs.attr('disabled', 'disabled');
 
+            /// Parse input data - make an object from array of elements
             const request_data = {}
-
-            /// Split element`s id and make it nested objects
-            /// e.g. element with id settings-my_name-value and text 'value' would be
-            /// {settings: {my_name: {value: 'value'}}}
-            function set_request_data_from_id(id, set_value) {
-                let curr_request_data = request_data
-                id.split('-').forEach((value, index, array) => {
-                    if (index === array.length-1) {
-                        curr_request_data[value] = set_value
-                        return;
-                    }
-                    if (Object.hasOwn(curr_request_data, value) === false) {
-                        curr_request_data[value] = {};
-                    }
-                    curr_request_data = curr_request_data[value];
-                })
-            }
-
-            /// Parse text data - make an object from array of elements
-            editable_text_tds.each((index, elem) => {
+            editable_inputs.each((index, elem) => {
                 const jquery_elem = $(elem);
-                const elem_divs = jquery_elem.children('div');
-
-                /// Default variant - there is no div elements
-                /// that are created via eddit mode
-                var text = jquery_elem.text();
-
-                /// There are div elements - parce them
-                if (elem_divs.length > 0) {
-                    text = jquery_elem.html()
-                        .trim()
-                        .replace(/<br(\s*)\/*>/ig, '\n')
-                        .replace(/<[p|div]\s/ig,   '\n$0')
-                        .replace(/([^>\s])<\/[p|div]+>/ig,'$1\n')
-                        .replace(/(<([^>]+)>)/ig, '')
-                        .trim();
-                }
-
-                set_request_data_from_id(jquery_elem.attr('id'), text);
-            });
-
-            /// Parse select data - make an object from array of elements
-            editable_selects.each((index, elem) => {
-                const jquery_elem = $(elem);
-                set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val());
+                set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val(), request_data);
             });
 
             /// Make a save call and reload page
-            $.ajax({
-                url:  window.location.pathname,
-                type: 'POST',
-                data: JSON.stringify(request_data),
-                contentType: 'application/json',
-                headers: {
-                    Accept: 'application/json'
-                },
-                success: () => location.reload(),
-                error: () => {
-                    /// Error - remove eddit classes fro, buttons
-                    button.removeClass('row-edit');
-                    button.removeClass('btn-outline-primary');
-                    button_icon.removeClass('bi-pencil-square');
+            apiCallAndReload({}, request_data, () => {
+                /// Error - remove eddit classes fro, buttons
+                button.removeClass('row-edit');
+                button.removeClass('btn-outline-primary');
+                button_icon.removeClass('bi-pencil-square');
 
-                    /// Error - place save button
-                    button.addClass('row-save');
-                    button.addClass('btn-outline-success');
-                    button_icon.addClass('bi-check2-square');
+                /// Error - place save button
+                button.addClass('row-save');
+                button.addClass('btn-outline-success');
+                button_icon.addClass('bi-check2-square');
 
-                    /// Error - only close button
-                    editable_tds.addClass('table-danger');
-                    editable_text_tds.attr('contenteditable', 'true');
-                    editable_selects.removeAttr('disabled');
-
-                    /// Error - show error
-                    $('#there-was-en-error').removeClass('d-none');
-                }
+                /// Error - only close button
+                editable_tds.addClass('table-danger');
+                editable_inputs.removeAttr('disabled');
             });
         }
     });
@@ -138,7 +90,7 @@ $(() => {
 
 
 /////////
-/// Row append action
+/// Row new or close button actions
 /////////
 $(() => {
     $('.row-new, .row-close').click((elem) => {
@@ -147,9 +99,12 @@ $(() => {
         const button_new_action   = button.hasClass('row-new');
         const button_close_action = button.hasClass('row-close');
 
+        $('.row-editable').children(':input').attr('disabled', 'disabled');
+        $('.row-new-value').children(':input').removeAttr('disabled');
+
         /// Close action - reload page
         if (button_close_action) {
-            location.reload()
+            location.reload();
         }
 
         /// Toggle eddit and save statuses
@@ -157,7 +112,7 @@ $(() => {
         button.toggleClass('btn-outline-secondary btn-outline-warning');
         button.children().toggleClass('bi-plus-square bi-slash-square');
 
-        /// New lement - show it and disable eddit buttons
+        /// New element - show it and disable eddit buttons
         if (button_new_action) {
             $('.elem-new').removeClass('d-none');
             $('.row-edit').attr('disabled', 'disabled');
@@ -185,19 +140,12 @@ $(() => {
         /// Get col and tds to eddit
         const col_id = button.parent().attr('id');
         const editable_tds = $(`.${col_id}`);
-
-        /// Get all of table data cells witch are avaliable to eddit as text
-        const editable_text_tds = $(`.${col_id}:not(:has(>select))`);
-
-        /// Get all of table data wuth selects witch are avalibale to choose
-        const editable_select_tds = $(`.${col_id}:has(>select)`);
-        const editable_selects    = editable_select_tds.children('select');
+        const editable_inputs = editable_tds.children(':input');
 
         /// If action is to start an eddit - start an eddit
         if (button_edit_action) {
             editable_tds.addClass('table-info');
-            editable_text_tds.attr('contenteditable', 'true');
-            editable_selects.removeAttr('disabled');
+            editable_inputs.removeAttr('disabled');
 
             /// Replace new button with close button
             const close_button = $('.col-new, .col-close');
@@ -218,86 +166,30 @@ $(() => {
         /// If action is to save - parse data and make ajax call to an api
         if (button_save_action) {
             editable_tds.removeClass('table-info');
-            editable_text_tds.attr('contenteditable', 'false');
-            editable_selects.attr('disabled', 'disabled');
-
-            const request_data = {}
-
-            /// Split element`s id and make it nested objects
-            /// e.g. element with id settings-my_name-value and text 'value' would be
-            /// {settings: {my_name: {value: 'value'}}}
-            function set_request_data_from_id(id, set_value) {
-                let curr_request_data = request_data
-                id.split('-').forEach((value, index, array) => {
-                    if (index === array.length-1) {
-                        curr_request_data[value] = set_value
-                        return;
-                    }
-                    if (Object.hasOwn(curr_request_data, value) === false) {
-                        curr_request_data[value] = {};
-                    }
-                    curr_request_data = curr_request_data[value];
-                })
-            }
-
-            /// Parse text data - make an object from array of elements
-            editable_text_tds.each((index, elem) => {
-                const jquery_elem = $(elem);
-                const elem_divs = jquery_elem.children('div');
-
-                /// Default variant - there is no div elements
-                /// that are created via eddit mode
-                var text = jquery_elem.text();
-
-                /// There are div elements - parce them
-                if (elem_divs.length > 0) {
-                    text = jquery_elem.html()
-                                                        .trim()
-                                                        .replace(/<br(\s*)\/*>/ig, '\n')
-                                                        .replace(/<[p|div]\s/ig,   '\n$0')
-                                                        .replace(/([^>\s])<\/[p|div]+>/ig,'$1\n')
-                                                        .replace(/(<([^>]+)>)/ig, '')
-                                                        .trim();
-                }
-
-                set_request_data_from_id(jquery_elem.attr('id'), text);
-            });
+            editable_inputs.attr('disabled', 'disabled');
 
             /// Parse select data - make an object from array of elements
-            editable_selects.each((index, elem) => {
+            const request_data = {}
+            editable_inputs.each((index, elem) => {
                 const jquery_elem = $(elem);
-                set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val());
+                set_request_data_from_id(jquery_elem.attr('id'), jquery_elem.val(), request_data);
             });
 
             /// Make a save call and reload page
-            $.ajax({
-                url:  window.location.pathname,
-                type: 'POST',
-                data: JSON.stringify(request_data),
-                contentType: 'application/json',
-                headers: {
-                    Accept: 'application/json'
-                },
-                success: () => location.reload(),
-                error: () => {
-                    /// Error - remove eddit classes fro, buttons
-                    button.removeClass('col-edit');
-                    button.removeClass('btn-outline-primary');
-                    button_icon.removeClass('bi-pencil-square');
+            apiCallAndReload({}, request_data, () => {
+                /// Error - remove eddit classes fro, buttons
+                button.removeClass('col-edit');
+                button.removeClass('btn-outline-primary');
+                button_icon.removeClass('bi-pencil-square');
 
-                    /// Error - place save button
-                    button.addClass('col-save');
-                    button.addClass('btn-outline-success');
-                    button_icon.addClass('bi-check2-square');
+                /// Error - place save button
+                button.addClass('col-save');
+                button.addClass('btn-outline-success');
+                button_icon.addClass('bi-check2-square');
 
-                    /// Error - only close button
-                    editable_tds.addClass('table-danger');
-                    editable_text_tds.attr('contenteditable', 'true');
-                    editable_selects.removeAttr('disabled');
-
-                    /// Error - show error
-                    $('#there-was-en-error').removeClass('d-none');
-                }
+                /// Error - only close button
+                editable_tds.addClass('table-danger');
+                editable_inputs.removeAttr('disabled');
             });
         }
     });

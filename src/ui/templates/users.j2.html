@@ -33,10 +33,10 @@
       <tr>
         <th>{{ i18n.chat_id }}</th>
         <th>{{ i18n.username }}</th>
-        <th>{{ user_document_name_field }}</th>
+        <th>{{ user_name_field.key }}</th>
         {% for field in fields %}
           <th id='fields-{{ field.id }}'
-            {% if field.status == field_status_personal_notification %}
+            {% if field.status == field_status_enum.PERSONAL_NOTIFICATION %}
               colspan="2"
             {% endif %}
           >
@@ -54,9 +54,9 @@
         <tr id="users-{{ user.id }}">
           <td id="users-{{ user.id }}-chat_id">{{ user.chat_id }}</td>
           <td id="users-{{ user.id }}-username">{% if user.username %}{{ user.username }} {% endif %}</td>
-          <td id="users-{{ user.id }}-user_document_name_field">{% if user.fields[user_document_name_field_id] and user.fields[user_document_name_field_id].value %}{{ user.fields[user_document_name_field_id].value }} {% endif %}</td>
+          <td id="users-{{ user.id }}-user_name_field_plain">{% if user_name_field.id in user.fields and not user.fields[user_name_field.id].empty %}{{ user.fields[user_name_field.id].value }}{% endif %}</td>
           {% for field in fields %}
-            {% if field.status == field_status_personal_notification %}
+            {% if field.status == field_status_enum.PERSONAL_NOTIFICATION %}
               <td id='users-{{ user.id }}-fields-{{ field.id }}-personal_notification_status'>
                 {% if field.id in user.fields and user.fields[field.id].personal_notification_status %}
                   {{ i18n['personal_notification_' + user.fields[field.id].personal_notification_status.value] }}
@@ -70,29 +70,42 @@
                 class='col-editable fields-{{ field.id }}'
               {% endif %}
             >
-              {%- if field.is_boolean -%}
-                  <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
-                    <option value="false" {% if field.id not in user.fields or  user.fields[field.id].value == 'false' %}selected='true'{% endif %}>{{ i18n.no  }}</option>
-                    <option value="true"  {% if field.id     in user.fields and user.fields[field.id].value == 'true'  %}selected='true'{% endif %}>{{ i18n.yes }}</option>
-                  </select>
+              {%- if field.type == field_type_enum.BOOLEAN -%}
+                <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
+                  <option value="false" {% if field.id not in user.fields or  user.fields[field.id].value == 'false' %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                  <option value="true"  {% if field.id     in user.fields and user.fields[field.id].value == 'true'  %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+                </select>
+              {%- elif field.type == field_type_enum.FULL_TEXT and field.answer_options -%}
+                <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
+                  <option value="" {% if field.id not in user.fields or not user.fields[field.id].value %}selected='true'{% endif %}>Пусто</option>
+                  {%- for answer_option in field.answer_options.split() -%}
+                    <option value="{{ answer_option }}" {% if field.id in user.fields and user.fields[field.id].value == answer_option %}selected='true'{% endif %}>{{ answer_option }}</option>
+                  {%- endfor -%}
+                </select>
+              {%- elif curr_field_branch.is_ui_editable and field.type == field_type_enum.FULL_TEXT-%}
+                <textarea id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-control" rows="7" cols="20" disabled>
+                  {%- if field.id in user.fields -%}{{ user.fields[field.id].value or '' }}{%- endif -%}
+                </textarea>
+              {%- elif curr_field_branch.is_ui_editable and field.type in [field_type_enum.IMAGE, field_type_enum.ZIP_DOCUMENT, field_type_enum.PDF_DOCUMENT]-%}
+                <input type="text" id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-control" disabled value="{%- if field.id in user.fields -%}{{ user.fields[field.id].value or '' }}{%- endif -%}"/>
               {%- elif field.id in user.fields -%}
-                {%- if field.image_bucket and not curr_field_branch.is_ui_editable -%}
+                {%- if field.type == field_type_enum.IMAGE and field.bucket -%}
                   <img
                     id='users-{{ user.id }}-fields-{{ field.id }}-image'
                     class="img-thumbnail"
                     alt="{{ user.fields[field.id].value }}"
                     style="max-height: 200px; max-width: 200px;"
-                    src="{{ uri_prefix }}/minio/{{ user.fields[field.id].image_bucket }}/{{ user.fields[field.id].value }}"
+                    src="{{ uri_prefix }}/minio/{{ user.fields[field.id].bucket }}/{{ user.fields[field.id].value }}"
                   />
-                {%- elif field.document_bucket -%}
+                {%- elif field.type in [field_type_enum.ZIP_DOCUMENT, field_type_enum.PDF_DOCUMENT] and field.bucket -%}
                   <a
                     id='users-{{ user.id }}-fields-{{ field.id }}-document'
                     class="btn btn-sm btn-primary"
                     target="_blank"
-                    href="{{ uri_prefix }}/minio/{{ user.fields[field.id].document_bucket }}/{{ user.fields[field.id].value }}"
+                    href="{{ uri_prefix }}/minio/{{ user.fields[field.id].bucket }}/{{ user.fields[field.id].value }}"
                     download
-                  >
-                      {{ i18n.download_file }} {{ user.fields[field.id].value }}
+                    >
+                    {{ i18n.download_file }} {{ user.fields[field.id].value }}
                   </a>
                 {%- else -%}
                   <span style="white-space: pre-line">{{ user.fields[field.id].value }}</span>

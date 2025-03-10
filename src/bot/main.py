@@ -1,26 +1,20 @@
 import asyncio
+import sys
+
 from loguru import logger
 
-from utils.custom_types import BotStatusEnum
+from src.bot import map_handlers
+from src.bot.telegram import default_handlers
+from src.bot.telegram.application import BBApplication
+from src.bot.telegram.application_builder import BBApplicationBuilder
+from src.utils.custom_types import BotStatusEnum
 
-from bot.application_builder import BBApplicationBuilder
-from bot.application import BBApplication
-
-from bot.map_handlers import (
-    map_service_mode_handlers,
-    map_default_handlers
-)
-
-from bot.handlers.default import error_handler
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     logger.info("Starting...")
-    
-    app: BBApplication = BBApplicationBuilder() \
-        .concurrent_updates(True) \
-        .build()
-    
-    app.add_error_handler(error_handler)
+
+    app: BBApplication = BBApplicationBuilder().concurrent_updates(True).build()  # type: ignore  # noqa: FBT003
+
+    app.add_error_handler(default_handlers.error_handler)
 
     logger.info("Getting current bot status...")
     loop = asyncio.new_event_loop()
@@ -28,20 +22,20 @@ if __name__ == '__main__':
 
     if app.status == BotStatusEnum.OFF:
         logger.warning("Bot should be OFF... so exiting... Bye!")
-        exit(0)
+        sys.exit(0)
     elif app.status == BotStatusEnum.SERVICE:
         logger.warning("Bot should be run in service mode... so settings only service mode handlers")
-        map_service_mode_handlers(app)
+        map_handlers.map_service_mode_handlers(app)
     elif app.status in [BotStatusEnum.RESTART, BotStatusEnum.RESTARTING]:
         logger.success("Bot is starting afer restart... continuing to init with default handlers")
-        map_default_handlers(app)
+        map_handlers.map_default_handlers(app)
     elif app.status == BotStatusEnum.ON:
         logger.success("Bot is on! So continuing with default handlers...")
-        map_default_handlers(app)
+        map_handlers.map_default_handlers(app)
     else:
         logger.error("Unknown state... exiting!")
-        exit(1)
-    
+        sys.exit(1)
+
     asyncio.set_event_loop(loop)
     app.run_polling()
 

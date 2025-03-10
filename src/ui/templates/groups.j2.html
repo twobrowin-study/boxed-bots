@@ -4,16 +4,19 @@
   <table id="groups-table" class="table table-striped align-middle">
     <thead>
       <tr>
-        <th id="groups-chat_id"    >{{ i18n.chat_id }}</th>
-        <th id="groups-status"     >{{ i18n.status }}</th>
-        <th id="groups-description">{{ i18n.description }}</th>
+        <th id="groups-chat_id"        >{{ i18n.chat_id }}</th>
+        <th id="groups-status"         >{{ i18n.status }}</th>
+        <th id="groups-pass_management">{{ i18n.pass_management }}</th>
+        <th id="groups-description"    >{{ i18n.description }}</th>
         <th id="groups-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
     <tbody>
       {% for group in groups %}
         <tr id="groups-{{ group.id }}">
-          <td id="groups-{{ group.id }}-chat_id" class="row-editable">{{ group.chat_id }}</td>
+          <td id="groups-{{ group.id }}-chat_id" class="row-editable">
+            <input type="text" id="groups-{{ group.id }}-chat_id" class="form-control" disabled value="{{ group.chat_id }}"/>
+          </td>
           <td id="groups-{{ group.id }}-status" class="row-editable">
             <select id="groups-{{ group.id }}-status-value" class="form-select" disabled>
               {% for status in group_status_enum %}
@@ -26,20 +29,38 @@
               {% endfor %}
             </select>
           </td>
-          <td id="groups-{{ group.id }}-description" class="row-editable" style="white-space: pre-line">{% if group.description %}{{ group.description }}{% endif %}</td>
+          <td id="groups-{{ group.id }}-pass_management" class="row-editable">
+            <select id="groups-{{ group.id }}-pass_management-bool_value" class="form-select" disabled>
+                <option value="false" {% if not group.pass_management %}selected='true'{% endif %}>{{ i18n.no  }}</option>
+                <option value="true"  {% if     group.pass_management %}selected='true'{% endif %}>{{ i18n.yes }}</option>
+            </select>
+          </td>
+          <td id="groups-{{ group.id }}-description" class="row-editable">
+            <input type="text" id="groups-{{ group.id }}-description" class="form-control" disabled value="{{ group.description or '' }}"/>
+          </td>
           <td id="groups-{{ group.id }}-edit"><button class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}
       <tr id="groups-new" class="elem-new d-none">
-        <td id="groups-new-chat_id" class="row-editable table-info" contenteditable="true"></td>
-        <td id="groups-new-status" class="row-editable table-info">
+        <td id="groups-new-chat_id" class="row-editable row-new-value table-info">
+          <input type="text" id="groups-new-chat_id" class="form-control"/>
+        </td>
+        <td id="groups-new-status" class="row-editable row-new-value table-info">
           <select id="groups-new-status-value" class="form-select">
             {% for status in group_status_enum %}
               <option value="{{ status.value }}">{{ i18n['group_' + status.value] }}</option>
             {% endfor %}
           </select>
         </td>
-        <td id="groups-new-description" class="row-editable table-info" contenteditable="true"></td>
+        <td id="groups-new-pass_management" class="row-editable row-new-value table-info">
+          <select id="groups-new-pass_management-bool_value" class="form-select">
+              <option value="false">{{ i18n.no  }}</option>
+              <option value="true" >{{ i18n.yes }}</option>
+          </select>
+        </td>
+        <td id="groups-new-description" class="row-editable row-new-value table-info">
+          <input type="text" id="groups-new-description" class="form-control"/>
+        </td>
         <td id="groups-new-edit" class="table-info"><button class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
       </tr>
     </tbody>

@@ -1,6 +1,8 @@
-# Бот клуба выпускников МГТУ
+# Бот в коробке (-ах)
 
-Это телеграм бот, который поставляется в одном контейнере с UI администратора, postgres и minio для хранения данных
+Это телеграм бот, который может поставляться в одном контейнере с UI администратора, postgres и minio для хранения данных
+
+Версия 2.0 - теперь бот доступен и как отдельные контейнеры для развёртывания в k8s
 
 ## Keycloak (Внешняя зависимость)
 
@@ -8,14 +10,21 @@
 
 Требуется создать клиент с авторизацией.
 
-Для локальной отладки можно воспользоваться реалмом, сохранёнными в директории `keycloak`. В нём следует создать собственного пользователя, дополнительные настройки для него не нужны.
+Для локальной отладки можно воспользоваться реалмом, сохранёнными в директории `build/keycloak`. В нём следует создать собственного пользователя, дополнительные настройки для него не нужны.
 
 Реалм автоматически подключается при запуске контейнеров.
 
-## Сборка контейнера
+## Сборка контейнеров
 
 ```bash
-docker compose build --push
+# Сборка общего контейнера
+docker build . --push -f build/single-image/Dockerfile -t twobrowin/boxed-bots-si:2.x.x
+
+# Сборка контейнера UI
+docker build . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=ui -t twobrowin/boxed-bots-ui:2.x.x
+
+# Сборка контейнера бота
+docker build . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=bot -t twobrowin/boxed-bots-bot:2.x.x
 ```
 
 ## Локальная сборка и отладка
@@ -24,7 +33,7 @@ docker compose build --push
 
 Следует скопировать `.env.example` в файл `.env` и заполнить недостающие поля или изменить под текущее окружение.
 
-Для того чтобы запустить БД и Minio для отладки (не запускать бота в контейнере) следует указать параметр `START_SERVICES=false` и выполнить `docker-compose up`.
+Для того чтобы запустить БД и Minio для отладки (не запускать бота в контейнере) следует указать параметр `START_SERVICES=false` и выполнить `docker-compose up` в директории `build/single-image`.
 
 Установка окружения:
 
@@ -41,13 +50,13 @@ poetry shell
 Запуск UI администратора:
 
 ```bash
-python src/ui/main.py
+python -m src.ui.main
 ```
 
 Запуск бота:
 
 ```bash
-python src/bot/main.py
+python -m src.bot.main
 ```
 
 ## Локальная отладка контейнера
@@ -55,45 +64,82 @@ python src/bot/main.py
 Следует скопировать `.env.example` в файл `.env` и заполнить недостающие поля или изменить под текущее окружение.
 
 ```bash
+# Запуск общего контейнера
+cd build/single-image
 docker-compose up
+
+# Запуск отдельных контейнеров
+# Запуск выполняется отдельно из-за зависимости, которые не обрабатываются стандартными контейнерами
+cd build/separated-images
+docker-compose up keycloak
+docker-compose up minio
+docker-compose up postgres
+docker-compose up ui
+docker-compose up bot
 ```
 
-## Развёртывание
+## Развёртывание | Ansible | Alumni
 
 ### Предвариательные требования
 
 Установить коллекцию vats:
 
 ```bash
-ansible-galaxy install -r deploy/requirements.yml
+ansible-galaxy install -r deploy/alimni/requirements.yml
 ```
 
 Установка docker:
 
 ```bash
-ansible-playbook deploy/playbooks/_00_docker.yaml -i deploy/inventory.yaml
+ansible-playbook deploy/alimni/playbooks/_00_docker.yaml -i deploy/alimni/inventory.yaml
 ```
 
 Получение сертификатов:
 
 ```bash
 # Генерирование сертификатов
-ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t generate_certs
+ansible-playbook deploy/alimni/playbooks/_01_certs.yaml -i deploy/alimni/inventory.yaml -t generate_certs
 
 # Или
 
 # Автоматическое получение сертификатов Let`s Encrypt
-ansible-playbook deploy/playbooks/_01_certs.yaml -i deploy/inventory.yaml -t obtain_certs
+ansible-playbook deploy/alimni/playbooks/_01_certs.yaml -i deploy/alimni/inventory.yaml -t obtain_certs
 ```
 
 ### Доступ по ssh
 
 ```bash
-ansible -i deploy/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
+ansible -i deploy/alimni/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
 ```
 
 ### Запуск бота
 
 ```bash
-ansible-playbook deploy/playbooks/_02_deploy.yaml -i deploy/inventory.yaml
+ansible-playbook deploy/alimni/playbooks/_02_deploy.yaml -i deploy/alimni/inventory.yaml
+```
+
+## Развёртывание | K8s | Mic-call
+
+Следует создать и подготовить:
+* Неймспейс bmstu
+* Доступ в Keycloak, приложение mic-call с ролью ui-user
+* Доступ в Minio, права mic-call
+* Доступ в Postgres, пользователь и БД от его имени mic-call
+* Заполнить секреты и переменные окружения
+
+```bash
+helm upgrade --install --debug mic-call ./deploy/charts/ -n bmstu -f ./deploy/charts/values_mic-call.yaml
+```
+
+## Развёртывание | K8s | Baumanec-call
+
+Следует создать и подготовить:
+* Неймспейс baumanec
+* Доступ в Keycloak, приложение baumanec-call-2025 с ролью ui-user
+* Доступ в Minio, права baumanec-call
+* Доступ в Postgres, пользователь и БД от его имени baumanec-call-2025
+* Заполнить секреты и переменные окружения
+
+```bash
+helm upgrade --install --debug baumanec-call-2025 ./deploy/charts/ -n baumanec -f ./deploy/charts/values_baumanec-call-2025.yaml
 ```

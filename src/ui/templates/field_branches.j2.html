@@ -4,19 +4,22 @@
   <table id="field_branches-table" class="table table-striped align-middle">
     <thead>
       <tr>
-        <th id="field_branches-key"             >{{ i18n.key }}</th>
-        <th id="field_branches-status"          >{{ i18n.status }}</th>
+        <th id="field_branches-key"            >{{ i18n.key }}</th>
+        <th id="field_branches-status"         >{{ i18n.status }}</th>
+        <th id="field_branches-order_place"    >{{ i18n.order_place }}</th>
         <th id="field_branches-is_ui_editable" >{{ i18n.is_ui_editable }}</th>
         <th id="field_branches-is_bot_editable">{{ i18n.is_bot_editable }}</th>
-        <th id="field_branches-is_deferrable"   >{{ i18n.is_deferrable }}</th>
-        <th id="field_branches-next_branch_id"   >{{ i18n.next_branch_id }}</th>
+        <th id="field_branches-is_deferrable"  >{{ i18n.is_deferrable }}</th>
+        <th id="field_branches-next_branch_id"  >{{ i18n.next_branch_id }}</th>
         <th id="field_branches-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
     <tbody>
       {% for field_branch in field_branches %}
         <tr id="field_branches-{{ field_branch.id }}">
-          <td id="field_branches-{{ field_branch.id }}-key" class="row-editable">{{ field_branch.key }}</td>
+          <td id="field_branches-{{ field_branch.id }}-key" class="row-editable">
+            <input type="text" id="field_branches-{{ field_branch.id }}-key" class="form-control" disabled value="{{ field_branch.key }}"/>
+          </td>
           <td id="field_branches-{{ field_branch.id }}-status" class="row-editable">
             <select id="field_branches-{{ field_branch.id }}-status-value" class="form-select" disabled>
               {% for status in field_branch_status_enum %}
@@ -28,6 +31,9 @@
                 </option>
               {% endfor %}
             </select>
+          </td>
+          <td id="field_branches-{{ field_branch.id }}-order_place" class="row-editable">
+            <input type="number" id="field_branches-{{ field_branch.id }}-order_place" class="form-control should-reload-page-on-change" disabled value="{{ field_branch.order_place }}"/>
           </td>
           <td id="field_branches-{{ field_branch.id }}-is_ui_editable" class="row-editable">
             <select id="field_branches-{{ field_branch.id }}-is_ui_editable-bool_value" class="form-select" disabled>
@@ -65,33 +71,38 @@
         </tr>
       {% endfor %}
       <tr id="field_branches-new" class="elem-new d-none">
-        <td id="field_branches-new-key" class="row-editable table-info" contenteditable="true"></td>
-        <td id="field_branches-new-status" class="row-editable table-info">
+        <td id="field_branches-new-key" class="row-editable row-new-value table-info">
+          <input type="text" id="field_branches-new-key" class="form-control"/>
+        </td>
+        <td id="field_branches-new-status" class="row-editable row-new-value table-info">
           <select id="field_branches-new-status-value" class="form-select">
             {% for status in field_branch_status_enum %}
               <option value="{{ status.value }}">{{ i18n['field_branch_' + status.value] }}</option>
             {% endfor %}
           </select>
         </td>
-        <td id="field_branches-new-is_ui_editable" class="row-editable table-info">
+        <td id="field_branches-new-order_place" class="row-editable row-new-value table-info">
+          <input type="number" id="field_branches-new-order_place" class="form-control should-reload-page-on-change" value="{{ field_branches[-1].order_place + 1 }}"/>
+        </td>
+        <td id="field_branches-new-is_ui_editable" class="row-editable row-new-value table-info">
           <select id="field_branches-new-is_ui_editable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-is_bot_editable" class="row-editable table-info">
+        <td id="field_branches-new-is_bot_editable" class="row-editable row-new-value table-info">
           <select id="field_branches-new-is_bot_editable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-is_deferrable" class="row-editable table-info">
+        <td id="field_branches-new-is_deferrable" class="row-editable row-new-value table-info">
           <select id="field_branches-new-is_deferrable-bool_value" class="form-select">
               <option value="false">{{ i18n.no  }}</option>
               <option value="true" >{{ i18n.yes }}</option>
           </select>
         </td>
-        <td id="field_branches-new-next_branch_id" class="row-editable table-info">
+        <td id="field_branches-new-next_branch_id" class="row-editable row-new-value table-info">
           <select id="field_branches-new-next_branch_id-id_value" class="form-select">
               <option value="None">{{ i18n.none }}</option>
               {% for next_field_branch in field_branches %}

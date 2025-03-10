@@ -1,15 +1,13 @@
-from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    async_sessionmaker
-)
-from sqlalchemy.ext.asyncio.session import AsyncSession
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, Result
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from utils.config_model import create_config
-from utils.db_model import Settings, BotStatus
+from src.utils.config_model import create_config
+from src.utils.db_model import BotStatus, Settings
+from src.utils.exceptions import NoBotStatusError, NoSettingsError
+from src.utils.minio_client import MinIOClient
 
-from utils.minio_client import MinIOClient
 
 class BBProvider:
     """
@@ -17,58 +15,39 @@ class BBProvider:
     """
 
     def __init__(self) -> None:
-        self.config    = create_config()
+        self.config = create_config()
         self.db_engine = create_async_engine(
-                f"postgresql+asyncpg://{self.config.pg_user}:{self.config.pg_password.get_secret_value()}@localhost:5432/postgres", 
-                echo=False,
-                pool_size=10,
-                max_overflow=2,
-                pool_recycle=300,
-                pool_pre_ping=True,
-                pool_use_lifo=True
-            )
-        self.db_session = async_sessionmaker(bind = self.db_engine)
-        self.minio = MinIOClient(self.config.minio_root_user, self.config.minio_root_password.get_secret_value(), self.config.minio_secure, self.config.minio_host)
-    
-    async def _get_kv_object(self, session: AsyncSession, object_class: type[BotStatus|Settings]) -> BotStatus|Settings:
-        """
-        Получить объект ключ-значение из БД при существующей сессии
-        """
-        result: Result = await session.execute(
-            select(object_class).add_columns(object_class.__table__.columns)
+            f"postgresql+asyncpg://{self.config.postgres_user}:{self.config.postgres_password.get_secret_value()}@{self.config.postgres_host}/{self.config.postgres_db}",
+            echo=False,
+            pool_size=10,
+            max_overflow=2,
+            pool_recycle=300,
+            pool_pre_ping=True,
+            pool_use_lifo=True,
         )
-        first: object_class = result.first()
-        return first
-    
-    async def _get_kv_object_create_session(self, object_class: type[BotStatus|Settings]) -> BotStatus|Settings:
-        """
-        Получить объект ключ-значение из БД с созданием сессии
-        """
-        async with self.db_session() as session:
-            return await self._get_kv_object(session, object_class)
-    
+        self.db_sessionmaker = async_sessionmaker(bind=self.db_engine)
+        self.minio = MinIOClient(
+            self.config.minio_host,
+            self.config.minio_secure,
+            self.config.minio_access_key,
+            self.config.minio_secret_key.get_secret_value(),
+        )
+        self.tz = ZoneInfo(self.config.tz)
+
     @property
     async def bot_status(self) -> BotStatus:
-        """
-        Получить текущий статус бота
-        """
-        return await self._get_kv_object_create_session(BotStatus)
-    
+        """Получить текущий статус бота"""
+        async with self.db_sessionmaker() as session:
+            bot_status = await session.scalar(select(BotStatus).limit(1))
+            if not bot_status:
+                raise NoBotStatusError
+        return bot_status
+
     @property
     async def settings(self) -> Settings:
-        """
-        Получить текущие настройки бота
-        """
-        return await self._get_kv_object_create_session(Settings)
-    
-    async def get_bot_status(self, session: AsyncSession) -> BotStatus:
-        """
-        Получить текущий статус бота с существующей сессией
-        """
-        return await self._get_kv_object(session, BotStatus)
-    
-    async def get_settings(self, session: AsyncSession) -> Settings:
-        """
-        Получить текущие настройки бота с существующей сессией
-        """
-        return await self._get_kv_object(session, Settings)
+        """Получить текущие настройки бота"""
+        async with self.db_sessionmaker() as session:
+            bot_status = await session.scalar(select(Settings).limit(1))
+            if not bot_status:
+                raise NoSettingsError
+        return bot_status

@@ -1,0 +1,46 @@
+services:  
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    ports:
+      - 8180:8180
+    command: start-dev --http-port=8180 --import-realm --verbose
+    volumes:
+      - ../keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    env_file:
+      - ../../.env
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-02-28T09-55-16Z
+    ports:
+      - 9000:9000
+      - 9001:9001
+    command: server /data --console-address ":9001"
+    env_file:
+      - ../../.env
+  
+  postgres:
+    image: postgres:15.12
+    ports:
+      - 5432:5432
+    env_file:
+      - ../../.env
+  
+  ui:
+    image: twobrowin/boxed-bots-ui:2.0.0
+    ports:
+      - 8080:8080
+    env_file:
+      - ../../.env
+    depends_on:
+      - keycloak
+      - postgres
+      - minio
+  
+  bot:
+    image: twobrowin/boxed-bots-bot:2.0.0
+    env_file:
+      - ../../.env
+    depends_on:
+      - ui
+      - postgres
+      - minio

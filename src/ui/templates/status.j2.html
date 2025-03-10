@@ -6,9 +6,9 @@
       <th>{{ i18n.bot_status }}</th>
       <td>
         {% if bot_status.bot_status == BotStatusEnum.ON %}
-          {{ i18n.on_male }}
+          {{ i18n.bot_is_on }}
         {% elif bot_status.bot_status == BotStatusEnum.OFF %}
-          {{ i18n.off_male }}
+          {{ i18n.bot_is_off }}
         {% elif bot_status.bot_status == BotStatusEnum.RESTART %}
           {{ i18n.restart_planned }}
         {% elif bot_status.bot_status == BotStatusEnum.RESTARTING %}
@@ -110,15 +110,7 @@
     $(() => {
       $('.bot-action').click((elem) => {
         let button = elem.delegateTarget;
-        $.ajax({
-          url:  `${window.location.pathname}?action=${button.getAttribute('action')}`,
-          type: 'POST',
-          headers: {
-            Accept: 'application/json'
-          },
-          success: () => location.reload(),
-          error: () => $('#there-was-en-error').removeClass('d-none')
-        });
+        apiCallAndReload({action: button.getAttribute('action')}, null, () => {});
       });
     });
   </script>
