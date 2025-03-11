@@ -128,7 +128,9 @@ async def _reply_start_help_command(app: BBApplication, user: User, message: Mes
                     current_question_or_help_text=user.curr_field.question_markdown_or_j2_template
                 ),
                 reply_markup=construct_field_reply_keyboard_markup(
-                    user.curr_field, settings, context="full_text_answer"
+                    user.curr_field,
+                    settings,
+                    context="full_text_answer" if not user.change_field_message_id else "change_user_field_value",
                 ),
             )
             return
