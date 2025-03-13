@@ -1,10 +1,10 @@
 uiContainer:
-  image: twobrowin/boxed-bots-ui:2.0.3
+  image: twobrowin/boxed-bots-ui:2.0.4
   imagePullPolicy: IfNotPresent
   containerPort: 8080
 
 botContainer:
-  image: twobrowin/boxed-bots-bot:2.0.3
+  image: twobrowin/boxed-bots-bot:2.0.4
   imagePullPolicy: IfNotPresent
 
 containers:
@@ -36,11 +36,11 @@ containers:
         key: postgres_password
 
   - name: MINIO_HOST
-    value: minio.boxed-bots.ru:443
+    value: minio.boxed-bots.ru
   - name: MINIO_SECURE
     value: "true"
   - name: MINIO_ACCESS_KEY
-    value: cxW5neHUGaEA2bzGJ5HY
+    value: baumanec-call-2025
   - name: MINIO_SECRET_KEY
     valueFrom:
       secretKeyRef:

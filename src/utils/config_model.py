@@ -368,9 +368,10 @@ def create_config() -> ConfigYaml:
     if not full_config:
         full_config = {}
 
-    full_config["minio_secure"] = False
-    if os.getenv("MINIO_CERTDIR"):
-        full_config["minio_secure"] = True
+    if not os.getenv("MINIO_SECURE"):
+        full_config["minio_secure"] = False
+        if os.getenv("MINIO_CERTDIR"):
+            full_config["minio_secure"] = True
 
     with Path.open(configs / "defaults.yaml") as stream:
         full_config["defaults"] = yaml.safe_load(stream)
