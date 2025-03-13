@@ -1,10 +1,10 @@
 uiContainer:
-  image: twobrowin/boxed-bots-ui:2.0.4
+  image: twobrowin/boxed-bots-ui:2.0.6
   imagePullPolicy: IfNotPresent
   containerPort: 8080
 
 botContainer:
-  image: twobrowin/boxed-bots-bot:2.0.4
+  image: twobrowin/boxed-bots-bot:2.0.6
   imagePullPolicy: IfNotPresent
 
 containers:

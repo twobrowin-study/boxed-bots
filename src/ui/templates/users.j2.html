@@ -75,12 +75,15 @@
                   <option value="false" {% if field.id not in user.fields or  user.fields[field.id].value == 'false' %}selected='true'{% endif %}>{{ i18n.no  }}</option>
                   <option value="true"  {% if field.id     in user.fields and user.fields[field.id].value == 'true'  %}selected='true'{% endif %}>{{ i18n.yes }}</option>
                 </select>
-              {%- elif field.type == field_type_enum.FULL_TEXT and field.answer_options -%}
+              {%- elif curr_field_branch.is_ui_editable and field.type == field_type_enum.FULL_TEXT and field.answer_options -%}
                 <select id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-select" disabled>
                   <option value="" {% if field.id not in user.fields or not user.fields[field.id].value %}selected='true'{% endif %}>Пусто</option>
-                  {%- for answer_option in field.answer_options.split() -%}
+                  {%- for answer_option in field.answer_options.split("\n") -%}
                     <option value="{{ answer_option }}" {% if field.id in user.fields and user.fields[field.id].value == answer_option %}selected='true'{% endif %}>{{ answer_option }}</option>
                   {%- endfor -%}
+                  {% if field.id in user.fields and user.fields[field.id].value not in field.answer_options.split("\n") %}
+                    <option value="{{ user.fields[field.id].value }}" selected='true'>{{ user.fields[field.id].value }}</option>
+                  {% endif %}
                 </select>
               {%- elif curr_field_branch.is_ui_editable and field.type == field_type_enum.FULL_TEXT-%}
                 <textarea id="users-{{ user.id }}-fields-{{ field.id }}-value" class="form-control" rows="7" cols="20" disabled>
