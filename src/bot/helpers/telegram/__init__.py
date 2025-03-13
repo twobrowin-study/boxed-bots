@@ -13,7 +13,7 @@ from src.bot.telegram.application import BBApplication
 from src.utils.db_model import Settings
 
 
-async def _get_base_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[BBApplication, Chat, Settings]:
+async def get_base_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[BBApplication, Chat, Settings]:
     """
     Получить основные данные Telegram
 
@@ -52,7 +52,7 @@ async def get_base_message_data(
     * Message - Сообщение
     * Settings - Настройки приложения
     """
-    app, chat, settings = await _get_base_data(update, context)
+    app, chat, settings = await get_base_data(update, context)
 
     if not update.effective_message:
         raise MessageIsEmptyError
@@ -77,7 +77,7 @@ async def get_base_callback_query_data(
     * Message - Сообщение, для которого пользователь нажал inline-кнопку (т.е. сообщение бота)
     * Settings - Настройки приложения
     """
-    app, chat, settings = await _get_base_data(update, context)
+    app, chat, settings = await get_base_data(update, context)
 
     if not update.callback_query:
         raise CallbackQueryIsEmptyError

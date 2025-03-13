@@ -10,7 +10,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from src.bot.exceptions import ChatMemberIsEmptyError, UserNotFoundError
-from src.bot.helpers.telegram import get_base_message_data
+from src.bot.helpers.telegram import get_base_data, get_base_message_data
 from src.bot.telegram.application import BBApplication
 from src.utils.custom_types import GroupStatusEnum
 from src.utils.db_model import Group, User
@@ -107,7 +107,7 @@ async def chat_member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     Для приватных чатов устанавливает статус бана бота для пользователя
     """
-    app, chat, _, _ = await get_base_message_data(update, context)
+    app, chat, _ = await get_base_data(update, context)
 
     if not update.my_chat_member:
         raise ChatMemberIsEmptyError
