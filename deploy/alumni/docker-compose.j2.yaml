@@ -147,7 +147,7 @@ services:
           - node.hostname == {{ placement.keycloak_postgres }}
 
   bmstu-alumni:
-    image: twobrowin/bmstu-alumni-bot:1.5.21
+    image: twobrowin/boxed-bots-si:2.0.9
     logging: *default-logging
     ports:
       - target:    9000
@@ -165,7 +165,7 @@ services:
     networks:
       - main
     volumes:
-      - data:/var/opt/box-bot
+      - data:/var/opt/app
       
       - "{{ certs.services_dirs.minio }}/fullchain.pem:/certs/minio/public.crt"
       - "{{ certs.services_dirs.minio }}/privkey.pem:/certs/minio/private.key"
@@ -175,28 +175,36 @@ services:
     environment:
       TZ: "Europe/Moscow"
       START_SERVICES: "true"
+      PATH_SECURE: "true"
       PATH_PREFIX: "/bmstu-alumni"
       
-      KEYCLOAK__URL: "https://{{ secrets.server_name }}/auth/"
-      KEYCLOAK__REALM:  "{{ secrets.keycloak.realm }}"
-      KEYCLOAK__CLIENT: "{{ secrets.keycloak.client }}"
-      KEYCLOAK__SECRET: "{{ secrets.keycloak.secrets }}"
-      KEYCLOAK__VERIFY: "true"
+      KEYCLOAK_URL: "https://{{ secrets.server_name }}/auth/"
+      KEYCLOAK_REALM:  "{{ secrets.keycloak.realm }}"
+      KEYCLOAK_CLIENT: "{{ secrets.keycloak.client }}"
+      KEYCLOAK_SECRET: "{{ secrets.keycloak.secrets }}"
+      KEYCLOAK_VERIFY: "true"
       
       TG_TOKEN: "{{ secrets.tg_api }}"
       
+      POSTGRES_HOST:     "{{ secrets.server_name }}:{{ ports.postgres }}"
+      POSTGRES_DB:       "postgres"
+
+      PG_USER:           "{{ secrets.postgres.user }}"
+      PG_PASSWORD:       "{{ secrets.postgres.password }}"
+      
+      POSTGRES_USER:     "{{ secrets.postgres.user }}"
+      POSTGRES_PASSWORD: "{{ secrets.postgres.password }}"
+      
       PG_SSL: "on"
-      PG_CERTDIR:  "/certs/postgres"
-      PG_USER:     "{{ secrets.postgres.user }}"
-      PG_PASSWORD: "{{ secrets.postgres.password }}"
+      PG_CERTDIR: "/certs/postgres"
       
       MINIO_HOST:                 "{{ secrets.server_name }}:{{ ports.minio_api }}"
       MINIO_SERVER_URL:           "https://{{ secrets.server_name }}:{{ ports.minio_api }}"
       MINIO_BROWSER_REDIRECT_URL: "https://{{ secrets.server_name }}:{{ ports.minio_ui }}"
 
       MINIO_CERTDIR: "/certs/minio"
-      MINIO_ROOT_USER:     "{{ secrets.minio.user }}"
-      MINIO_ROOT_PASSWORD: "{{ secrets.minio.password }}"
+      MINIO_ACCESS_KEY: "{{ secrets.minio.user }}"
+      MINIO_SECRET_KEY: "{{ secrets.minio.password }}"
     deploy:
       replicas: 1
       placement:

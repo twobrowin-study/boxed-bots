@@ -104,7 +104,7 @@ async def upload_aproved_passes_xlsx_start_handler(update: Update, context: Cont
     async with app.provider.db_sessionmaker() as session:
         pass_field_type = await session.scalar(select(Field.type).where(Field.key == settings.user_pass_field_plain))
 
-    if pass_field_type == FieldTypeEnum.IMAGE:
+    if pass_field_type == FieldTypeEnum.FULL_TEXT:
         await message.reply_markdown(
             settings.group_superadmin_pass_send_approved_xlsx_message_plain,
             reply_markup=get_group_cancel_keyboard(settings),

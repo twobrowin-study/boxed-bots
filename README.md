@@ -85,37 +85,37 @@ docker-compose up bot
 Установить коллекцию vats:
 
 ```bash
-ansible-galaxy install -r deploy/alimni/requirements.yml
+ansible-galaxy install -r deploy/alumni/requirements.yml
 ```
 
 Установка docker:
 
 ```bash
-ansible-playbook deploy/alimni/playbooks/_00_docker.yaml -i deploy/alimni/inventory.yaml
+ansible-playbook deploy/alumni/playbooks/_00_docker.yaml -i deploy/alumni/inventory.yaml
 ```
 
 Получение сертификатов:
 
 ```bash
 # Генерирование сертификатов
-ansible-playbook deploy/alimni/playbooks/_01_certs.yaml -i deploy/alimni/inventory.yaml -t generate_certs
+ansible-playbook deploy/alumni/playbooks/_01_certs.yaml -i deploy/alumni/inventory.yaml -t generate_certs
 
 # Или
 
 # Автоматическое получение сертификатов Let`s Encrypt
-ansible-playbook deploy/alimni/playbooks/_01_certs.yaml -i deploy/alimni/inventory.yaml -t obtain_certs
+ansible-playbook deploy/alumni/playbooks/_01_certs.yaml -i deploy/alumni/inventory.yaml -t obtain_certs
 ```
 
 ### Доступ по ssh
 
 ```bash
-ansible -i deploy/alimni/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
+ansible -i deploy/alumni/inventory.yaml all --module-name include_role --args name=bmstu.vats.ssh_connection
 ```
 
 ### Запуск бота
 
 ```bash
-ansible-playbook deploy/alimni/playbooks/_02_deploy.yaml -i deploy/alimni/inventory.yaml
+ansible-playbook deploy/alumni/playbooks/_02_deploy.yaml -i deploy/alumni/inventory.yaml
 ```
 
 ## Развёртывание | K8s | Mic-call
