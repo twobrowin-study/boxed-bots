@@ -12,7 +12,7 @@ from src.bot.exceptions import (
 )
 from src.bot.helpers.fields.keyboards import construct_field_reply_keyboard_markup
 from src.bot.helpers.fields.values.get import user_get_name_field_value
-from src.bot.helpers.telegram import get_safe_message_markdown_v1_content
+from src.bot.helpers.telegram import get_message_text_urled
 from src.bot.telegram.application import BBApplication
 from src.utils.custom_types import FieldStatusEnum, FieldTypeEnum
 from src.utils.db_model import Field, Settings, User
@@ -55,7 +55,7 @@ async def _prepere_str_field_value_or_answer_error(
         await _reply_field_error_or_repeate_question(user, field, message, field.type_error_markdown, settings)
         return None
 
-    field_value = _prepare_field_value_str_value_from_message(app, field, message)
+    field_value = prepare_field_value_str_value(app, field, get_message_text_urled(message))
     if not field_value:
         await _reply_field_error_or_repeate_question(user, field, message, field.validation_error_markdown, settings)
         return None
@@ -141,12 +141,6 @@ async def _reply_field_error_or_repeate_question(
             "full_text_answer" if not user.change_field_message_id else "change_user_field_value",
         ),
     )
-
-
-def _prepare_field_value_str_value_from_message(app: BBApplication, field: Field, message: Message) -> str | None:
-    """Подготовить текстовое значение поля из сообщения"""
-    field_value = get_safe_message_markdown_v1_content(message)
-    return prepare_field_value_str_value(app, field, field_value)
 
 
 def prepare_field_value_str_value(app: BBApplication, field: Field, field_value: str) -> str | None:

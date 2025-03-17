@@ -1,6 +1,6 @@
 from telegram import Chat, Message, Update
+from telegram.constants import MessageEntityType
 from telegram.ext import ContextTypes
-from telegram.helpers import escape_markdown
 
 from src.bot.exceptions import (
     CallbackQueryDataIsEmptyError,
@@ -107,14 +107,16 @@ def shrink_text_up_to_80_symbols(text: str | None) -> str:
     return text
 
 
-def get_safe_message_markdown_v1_content(message: Message) -> str:
+def get_message_text_urled(message: Message) -> str:
     """
-    Безопасно получить значение текста пользователя
+    Получить текст ссобщения с сохранением ссылок
+    """
+    if not message.text:
+        return ""
 
-    Используется для того чтобы превратить текст markdown_v2 в markdown_v1
-    """
-    try:
-        text = message.text_markdown_urled
-    except Exception:
-        text = escape_markdown(message.text if message.text else "")
+    text = message.text
+    text_links_entities = message.parse_entities([MessageEntityType.TEXT_LINK])
+    for entity, substr in text_links_entities.items():
+        text = text.replace(substr, f"{substr} ({entity.url})")
+
     return text
