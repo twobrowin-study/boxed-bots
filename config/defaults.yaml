@@ -268,9 +268,13 @@ user_pass_submit_canceled_message_plain:
   description: Сообщение, отправляемое пользователю после отмены отправки заявки на пропуск
   value: Отправка заявки отменена
 
-user_field_to_request_pass_plain:
+user_pass_required_field_plain:
   description: Необязательное по умолчанию поле, необходимое для получения пропуска
   value: Фото
+
+user_pass_availability_field_plain:
+  description: Булево поле, разрешающее пользователю получить пропуск
+  value: Пропуск доступен
 
 user_pass_message_plain:
   description: Сообщение, посылаемое вместе с пропуском пользователя
@@ -283,6 +287,10 @@ user_pass_removed_message_plain:
 user_pass_hint_message_plain:
   description: Сообщение помощи пользователю о регистрации пропуска
   value: Ты можешь оставить заявку на изготовление пропуска выпускника. Для этого необходимо выбрать пункт меню `Пропуск`.
+
+user_pass_unavailable_message_plain:
+  description: Сообщение пользователю о недоступности регистрации пропуска
+  value: К сожалению, ты не можешь запросить пропуск
 
 user_pass_add_request_field_value_message_plain:
   description: Сообщение, отправляемое в случае если невозможно отправить запрос на формирование пропуска поскольку не заполнено поле, необходимое для получения пропуска

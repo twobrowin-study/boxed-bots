@@ -590,14 +590,19 @@ class Settings(Base):
     user_pass_submit_canceled_message_plain: Mapped[str] = mapped_column()
     """Сообщение, отправляемое пользователю после отмены отправки заявки на пропуск"""
 
-    user_field_to_request_pass_plain: Mapped[str] = mapped_column()
+    user_pass_required_field_plain: Mapped[str] = mapped_column()
     """Необязательно по умолчанию поле, необходимое для получения пропуска"""
+    user_pass_availability_field_plain: Mapped[str] = mapped_column()
+    """Булево поле, разрешающее пользователю получить пропуск"""
+
     user_pass_message_plain: Mapped[str] = mapped_column()
     """Сообщение, посылаемое вместе с пропуском пользователя"""
     user_pass_removed_message_plain: Mapped[str] = mapped_column()
     """Сообщение, высылаемое в случае если запланирована доставка сообщения с пропуском, но пропуска нет"""
     user_pass_hint_message_plain: Mapped[str] = mapped_column()
     """Сообщение помощи пользователю о регистрации пропуска"""
+    user_pass_unavailable_message_plain: Mapped[str] = mapped_column()
+    """Сообщение пользователю о недоступности регистрации пропуска"""
     user_pass_add_request_field_value_message_plain: Mapped[str] = mapped_column()
     """Сообщение, отправляемое в случае если невозможно отправить запрос на формирование пропуска поскольку не заполнено поле, необходимое для получения пропуска"""
     user_pass_not_yet_approved_message_plain: Mapped[str] = mapped_column()

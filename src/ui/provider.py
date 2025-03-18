@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.ui.keycloak import Keycloak
 from src.utils.bb_provider import BBProvider
-from src.utils.custom_types import FieldBranchStatusEnum, FieldStatusEnum
+from src.utils.custom_types import FieldBranchStatusEnum, FieldStatusEnum, FieldTypeEnum
 from src.utils.db_model import (
     Base,
     BotStatus,
@@ -157,11 +157,11 @@ class Provider(BBProvider):
                             "question_markdown_or_j2_template": settings.user_name_field_plain,
                         },
                         {
-                            "key": settings.user_field_to_request_pass_plain,
+                            "key": settings.user_pass_required_field_plain,
                             "status": FieldStatusEnum.NORMAL,
                             "order_place": 1,
                             "branch_id": first_field_branch_id,
-                            "question_markdown_or_j2_template": settings.user_field_to_request_pass_plain,
+                            "question_markdown_or_j2_template": settings.user_pass_required_field_plain,
                             "is_skippable": True,
                         },
                     ]
@@ -188,10 +188,22 @@ class Provider(BBProvider):
 
             await session.execute(
                 insert(Field).values(
-                    key=settings.user_pass_field_plain,
-                    status=FieldStatusEnum.PERSONAL_NOTIFICATION,
-                    order_place=0,
-                    branch_id=pass_branch_id,
+                    [
+                        {
+                            "key": settings.user_pass_availability_field_plain,
+                            "status": FieldStatusEnum.JINJA2_FROM_USER_ON_CREATE,
+                            "type": FieldTypeEnum.BOOLEAN,
+                            "order_place": 0,
+                            "branch_id": pass_branch_id,
+                            "question_markdown_or_j2_template": "true",
+                        },
+                        {
+                            "key": settings.user_pass_field_plain,
+                            "status": FieldStatusEnum.PERSONAL_NOTIFICATION,
+                            "order_place": 1,
+                            "branch_id": pass_branch_id,
+                        },
+                    ]
                 )
             )
 

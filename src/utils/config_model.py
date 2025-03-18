@@ -73,10 +73,13 @@ class Defaults(BaseModel, extra="forbid"):
     user_pass_confirm_button_plain: DefaultValue
     user_pass_submit_canceled_message_plain: DefaultValue
 
-    user_field_to_request_pass_plain: DefaultValue
+    user_pass_required_field_plain: DefaultValue
+    user_pass_availability_field_plain: DefaultValue
+
     user_pass_message_plain: DefaultValue
     user_pass_removed_message_plain: DefaultValue
     user_pass_hint_message_plain: DefaultValue
+    user_pass_unavailable_message_plain: DefaultValue
     user_pass_add_request_field_value_message_plain: DefaultValue
     user_pass_not_yet_approved_message_plain: DefaultValue
     user_pass_submit_message_plain: DefaultValue

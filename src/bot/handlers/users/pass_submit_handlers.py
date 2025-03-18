@@ -30,21 +30,31 @@ async def start_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         settings,
     ) = await get_user_callback_query_data_send_strange_error_and_rise(update, context, handler)
 
-    # Пользователь уже запросил пропуск или уже его получил
-    if user.pass_status != PassSubmitStatusEnum.NOT_SUBMITED:
-        await user_send_pass_information(app, user, callback_query_message, settings)
-        return ConversationHandler.END
-
     async with app.provider.db_sessionmaker() as session:
-        user_field_value_to_request_pass = await session.scalar(
+        user_pass_required_field_value = await session.scalar(
             select(UserFieldValue)
-            .where(Field.key == settings.user_field_to_request_pass_plain)
+            .where(Field.key == settings.user_pass_required_field_plain)
             .where(UserFieldValue.user_id == user.id)
             .where(UserFieldValue.field_id == Field.id)
         )
+        user_pass_availability_field_value = await session.scalar(
+            select(UserFieldValue)
+            .where(UserFieldValue.user_id == user.id)
+            .where(UserFieldValue.field_id == Field.id)
+            .where(Field.key == settings.user_pass_availability_field_plain)
+        )
+
+    # Пользователь уже запросил пропуск или уже его получил или не имеет возможности его запросить
+    if (
+        user.pass_status != PassSubmitStatusEnum.NOT_SUBMITED
+        or not user_pass_availability_field_value
+        or user_pass_availability_field_value.value != "true"
+    ):
+        await user_send_pass_information(app, user, callback_query_message, settings)
+        return ConversationHandler.END
 
     # У пользователя не заполнено необходимое поле для запроса пропуска
-    if not user_field_value_to_request_pass:
+    if not user_pass_required_field_value:
         await callback_query_message.reply_markdown(
             settings.user_pass_add_request_field_value_message_plain,
             reply_markup=await get_user_current_keyboard(app, user),

@@ -16,6 +16,20 @@ async def user_send_pass_information(app: BBApplication, user: User, message: Me
     """Выслать пользователю ткущий статус пропуска"""
     logger.debug(f"Sending pass status info to user {user.id=}")
 
+    async with app.provider.db_sessionmaker() as session:
+        user_pass_availability_field_value = await session.scalar(
+            select(UserFieldValue)
+            .where(UserFieldValue.user_id == user.id)
+            .where(UserFieldValue.field_id == Field.id)
+            .where(Field.key == settings.user_pass_availability_field_plain)
+        )
+
+    if not user_pass_availability_field_value or user_pass_availability_field_value.value != "true":
+        await message.reply_markdown(
+            text=settings.user_pass_unavailable_message_plain, reply_markup=await get_user_current_keyboard(app, user)
+        )
+        return
+
     if user.pass_status == PassSubmitStatusEnum.NOT_SUBMITED:
         await message.reply_markdown(
             settings.user_pass_hint_message_plain,
@@ -39,19 +53,19 @@ async def construct_pass_submit_inline_keyboard(
 ) -> InlineKeyboardMarkup:
     async with app.provider.db_sessionmaker() as session:
         field_to_request_pass = await session.scalar(
-            select(Field).where(Field.key == settings.user_field_to_request_pass_plain)
+            select(Field).where(Field.key == settings.user_pass_required_field_plain)
         )
         if not field_to_request_pass:
             raise NoFieldToRequestPassIsFoundError
 
-        user_field_value_to_request_pass = await session.scalar(
+        user_pass_required_field_value = await session.scalar(
             select(UserFieldValue)
-            .where(Field.key == settings.user_field_to_request_pass_plain)
+            .where(Field.key == settings.user_pass_required_field_plain)
             .where(UserFieldValue.user_id == user.id)
             .where(UserFieldValue.field_id == Field.id)
         )
     field_to_request_pass_action = (
-        app.provider.config.i18n.change if user_field_value_to_request_pass else app.provider.config.i18n.append
+        app.provider.config.i18n.change if user_pass_required_field_value else app.provider.config.i18n.append
     )
     return InlineKeyboardMarkup(
         [
