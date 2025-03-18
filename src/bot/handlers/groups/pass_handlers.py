@@ -20,6 +20,7 @@ from src.bot.helpers.groups import (
     get_group_message_data,
     group_passes_download_document,
 )
+from src.bot.helpers.telegram import send_long_markdown_splitted_by_newlines
 from src.bot.telegram.callback_constants import GroupApprovePassesConversation
 from src.utils.custom_types import FieldTypeEnum, PassSubmitStatusEnum, PersonalNotificationStatusEnum
 from src.utils.db_model import Field, User, UserFieldValue
@@ -51,47 +52,51 @@ async def download_submited_key_handler(update: Update, context: ContextTypes.DE
         users_selected = await session.execute(
             select(User).where(User.pass_status == PassSubmitStatusEnum.SUBMITED).order_by(User.id.asc())
         )
-        users_df = pd.DataFrame(
-            [
-                user.to_plain_dict(i18n=app.provider.config.i18n, result_dict_type="ordered_pass_report")
-                for user in users_selected.scalars()
-            ]
+
+    users_df = pd.DataFrame(
+        [
+            user.to_plain_dict(i18n=app.provider.config.i18n, result_dict_type="ordered_pass_report")
+            for user in users_selected.scalars()
+        ]
+    )
+
+    if settings.user_pass_field_plain not in users_df.columns:
+        users_df[settings.user_pass_field_plain] = None
+
+    logger.debug(f"Users df:\n{users_df}")
+
+    if users_df.empty:
+        await message.reply_markdown(settings.group_superadmin_pass_submitted_empty_message_plain)
+        return ConversationHandler.END
+
+    filename = f"{datetime.now(app.provider.tz).strftime('%Y_%m_%d__%H_%M_%S')}__submitted_pass_report.xlsx"
+
+    sheet_name = app.provider.config.i18n.download_users_report
+
+    report_bio = io.BytesIO()
+    with pd.ExcelWriter(report_bio) as writer:
+        users_df.to_excel(
+            writer,
+            startrow=0,
+            merge_cells=False,
+            sheet_name=sheet_name,
+            index=False,
         )
 
-        logger.debug(f"Users df:\n{users_df}")
+        worksheet: Worksheet = writer.sheets[sheet_name]
+        row_count = len(users_df.index)
+        column_count = len(users_df.columns)
 
-        if users_df.empty:
-            await message.reply_markdown(settings.group_superadmin_pass_submitted_empty_message_plain)
-            return ConversationHandler.END
+        worksheet.autofilter(0, 0, row_count - 1, column_count - 1)
 
-        filename = f"{datetime.now(app.provider.tz).strftime('%Y_%m_%d__%H_%M_%S')}__submitted_pass_report.xlsx"
+        for idx, col in enumerate(users_df):
+            series = users_df[col]
+            max_len = max((series.astype(str).map(len).max(), len(str(series.name)))) + 5
+            worksheet.set_column(idx, idx, max_len)
 
-        sheet_name = app.provider.config.i18n.download_users_report
-
-        report_bio = io.BytesIO()
-        with pd.ExcelWriter(report_bio) as writer:
-            users_df.to_excel(
-                writer,
-                startrow=0,
-                merge_cells=False,
-                sheet_name=sheet_name,
-                index=False,
-            )
-
-            worksheet: Worksheet = writer.sheets[sheet_name]
-            row_count = len(users_df.index)
-            column_count = len(users_df.columns)
-
-            worksheet.autofilter(0, 0, row_count - 1, column_count - 1)
-
-            for idx, col in enumerate(users_df):
-                series = users_df[col]
-                max_len = max((series.astype(str).map(len).max(), len(str(series.name)))) + 5
-                worksheet.set_column(idx, idx, max_len)
-
-        report_bio.seek(0)
-        await message.reply_document(report_bio, filename=filename)
-        return ConversationHandler.END
+    report_bio.seek(0)
+    await message.reply_document(report_bio, filename=filename)
+    return ConversationHandler.END
 
 
 async def upload_aproved_passes_xlsx_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -214,10 +219,11 @@ async def upload_aproved_passes_xlsx_document_handler(update: Update, context: C
                 select(User).where(User.id.in_(passes_not_to_save_df["id"].to_numpy()))
             )
             user_dicts_not_to_save = [user.to_plain_dict() for user in user_objects_not_to_save]
-            await message.reply_markdown(
+            await send_long_markdown_splitted_by_newlines(
+                message,
                 await Template(
                     settings.group_superadmin_pass_not_approved_message_j2_template, enable_async=True
-                ).render_async(users=user_dicts_not_to_save)
+                ).render_async(users=user_dicts_not_to_save),
             )
 
         logger.debug(f"Passes to be saved df:\n{passes_to_save_df[['id']]}")
@@ -264,7 +270,8 @@ async def upload_aproved_passes_xlsx_document_handler(update: Update, context: C
 
         await session.commit()
 
-    await message.reply_markdown(
+    await send_long_markdown_splitted_by_newlines(
+        message,
         await Template(settings.group_superadmin_pass_approved_message_j2_template, enable_async=True).render_async(
             users=user_objects_saved
         ),

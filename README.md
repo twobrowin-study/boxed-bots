@@ -66,16 +66,16 @@ python -m src.bot.main
 ```bash
 # Запуск общего контейнера
 cd build/single-image
-docker-compose up
+docker compose up -d
 
 # Запуск отдельных контейнеров
 # Запуск выполняется отдельно из-за зависимости, которые не обрабатываются стандартными контейнерами
 cd build/separated-images
-docker-compose up keycloak
-docker-compose up minio
-docker-compose up postgres
-docker-compose up ui
-docker-compose up bot
+docker compose up keycloak -d
+docker compose up minio -d
+docker compose up postgres -d
+docker compose up ui -d
+docker compose up bot -d
 ```
 
 ## Развёртывание | Ansible | Alumni

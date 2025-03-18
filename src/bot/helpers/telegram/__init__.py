@@ -1,4 +1,4 @@
-from telegram import Chat, Message, Update
+from telegram import Chat, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.constants import MessageEntityType
 from telegram.ext import ContextTypes
 
@@ -120,3 +120,17 @@ def get_message_text_urled(message: Message) -> str:
         text = text.replace(substr, f"{substr} ({entity.url})")
 
     return text
+
+
+async def send_long_markdown_splitted_by_newlines(
+    message: Message, text: str, reply_markup: ReplyKeyboardMarkup | ReplyKeyboardRemove | None = None
+) -> None:
+    send_text: str = ""
+    for splitted_text in text.split("\n"):
+        tmp_send_text = f"{send_text}\n{splitted_text}"
+        if len(tmp_send_text) >= 4096:
+            await message.reply_markdown(send_text)
+            send_text = splitted_text
+        else:
+            send_text = tmp_send_text
+    await message.reply_markdown(send_text, reply_markup=reply_markup)

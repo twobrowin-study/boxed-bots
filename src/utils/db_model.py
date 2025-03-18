@@ -321,9 +321,9 @@ class User(Base):
           full - Выгрузка всех полей пользователя (статичных и дополнительных)
           ordered_pass_report - Только отсортированные данные для отчёта пропусков
         """
-        user_dict: dict[str, str | int | None] = {"id": self.id}
+        user_dict: dict[str, str | int | None] = {}
         if result_dict_type == "full":
-            user_dict |= {"chat_id": self.chat_id, "username": self.username}
+            user_dict |= {"id": self.id, "chat_id": self.chat_id, "username": self.username}
 
         fields_dict: dict[str, UserFieldDataPlain] = {}
         for field_value in self.fields_values:
@@ -343,12 +343,14 @@ class User(Base):
                         value = i18n.no
 
                 if result_dict_type == "full":
-                    field_order_key = f"{field.branch_id}_{field.order_place}"
+                    field_order_key = f"{field.branch_id:04d}_{field.order_place:04d}"
                 elif result_dict_type == "ordered_pass_report":
-                    field_order_key = f"{field.report_order}"
+                    field_order_key = f"{field.report_order:04d}"
 
                 fields_dict |= {field_order_key: UserFieldDataPlain(key=field.key, value=value)}
         user_dict |= {fv.key: fv.value for _, fv in sorted(fields_dict.items(), key=lambda item: item[0])}
+        if result_dict_type == "ordered_pass_report":
+            user_dict |= {"id": self.id}
         return user_dict
 
     def prepare(self) -> UserDataPrepared:
