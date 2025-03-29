@@ -145,7 +145,7 @@ async def prepare_me_information_message_documents_photos_text_and_reply_keyboar
             if field.type not in [FieldTypeEnum.IMAGE, FieldTypeEnum.PDF_DOCUMENT, FieldTypeEnum.ZIP_DOCUMENT]:
                 continue
 
-            filename = prepeared_field_value.value.replace("_thumbnail", "")
+            filename = app.provider.minio.get_original_filename(prepeared_field_value.value)
 
             if prepeared_field_value.value_file_id:
                 file = prepeared_field_value.value_file_id

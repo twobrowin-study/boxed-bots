@@ -552,10 +552,20 @@ class Settings(Base):
     """Ответ пользователю, который изменил одно из сообщений."""
     user_error_message_plain: Mapped[str] = mapped_column()
     """Ответ пользователю об ошибке"""
-    user_file_too_large_message_plain: Mapped[str] = mapped_column()
-    """Ответ пользователю о том что отправленный файл слишком большой"""
     user_file_upload_without_field_context: Mapped[str] = mapped_column()
     """Ответ пользователю на загрузку файла без контекста поля"""
+
+    user_file_too_large_message_j2_template: Mapped[str] = mapped_column()
+    """Ответ пользователю о том что отправленный файл слишком большой"""
+    user_max_image_file_size_kb_int: Mapped[str] = mapped_column()
+    """Максимальный размер изображения в KB"""
+    user_max_document_file_size_kb_int: Mapped[str] = mapped_column()
+    """Максимальный размер документа в KB"""
+
+    user_unavaliable_image_type_message_j2_template: Mapped[str] = mapped_column()
+    """Ответ пользователю о том что отправленное изображение имеет неподдерживаемый тип"""
+    user_avaliable_image_types_array: Mapped[str] = mapped_column()
+    """Доступные типы файлов изображений"""
 
     group_normal_help_message_plain: Mapped[str] = mapped_column()
     """Текст помощи для обычной группы пользователей"""
@@ -573,6 +583,9 @@ class Settings(Base):
     """Количество активных пользователей, по которым будет выслано оповещение в группу администраторов"""
     group_admin_report_currently_active_users_message_j2_template: Mapped[str] = mapped_column()
     """Шаблон сообщения, которое будет выслано в группу администраторов при достижении необходимого числа пользователей"""
+
+    group_admin_status_report_message_j2_template: Mapped[str] = mapped_column()
+    """Шаблон сообщения отчёта для админиатраторов"""
 
     user_pass_field_plain: Mapped[str] = mapped_column()
     """
@@ -643,9 +656,6 @@ class Settings(Base):
 
     user_number_of_last_news_to_show_int: Mapped[str] = mapped_column()
     """Количество последних показываемых новостей"""
-
-    group_admin_status_report_message_j2_template: Mapped[str] = mapped_column()
-    """Шаблон сообщения отчёта для админиатраторов"""
 
 
 class NewsPost(Base):

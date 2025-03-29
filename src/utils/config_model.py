@@ -53,8 +53,14 @@ class Defaults(BaseModel, extra="forbid"):
     user_strange_error_massage_plain: DefaultValue
     user_message_edited_reply_message_plain: DefaultValue
     user_error_message_plain: DefaultValue
-    user_file_too_large_message_plain: DefaultValue
     user_file_upload_without_field_context: DefaultValue
+
+    user_file_too_large_message_j2_template: DefaultValue
+    user_max_image_file_size_kb_int: DefaultValue
+    user_max_document_file_size_kb_int: DefaultValue
+
+    user_unavaliable_image_type_message_j2_template: DefaultValue
+    user_avaliable_image_types_array: DefaultValue
 
     group_normal_help_message_plain: DefaultValue
     group_admin_help_message_plain: DefaultValue
@@ -65,6 +71,8 @@ class Defaults(BaseModel, extra="forbid"):
 
     group_admin_report_every_x_active_users_int: DefaultValue
     group_admin_report_currently_active_users_message_j2_template: DefaultValue
+
+    group_admin_status_report_message_j2_template: DefaultValue
 
     user_pass_field_plain: DefaultValue
 
@@ -104,8 +112,6 @@ class Defaults(BaseModel, extra="forbid"):
 
     user_defer_button_plain: DefaultValue
     user_defered_message_plain: DefaultValue
-
-    group_admin_status_report_message_j2_template: DefaultValue
 
     def model_dump_anythig(self, what_to_dump: str) -> dict[str, str]:
         full_dump: dict[str, dict[str, str]] = self.model_dump()
