@@ -1,6 +1,6 @@
 services:
   box-bot:
-    image: twobrowin/boxed-bots-si:2.1.0
+    image: twobrowin/boxed-bots-si:2.3.3
     ports:
       - 8080:8080
       - 5432:5432

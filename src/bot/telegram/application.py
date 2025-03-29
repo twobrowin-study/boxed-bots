@@ -13,11 +13,7 @@ from telegram import (
     BotName,
     BotShortDescription,
 )
-from telegram.ext import Application, CallbackContext
-from telegram.ext._basepersistence import BasePersistence
-from telegram.ext._baseupdateprocessor import BaseUpdateProcessor
-from telegram.ext._contexttypes import ContextTypes
-from telegram.ext._updater import Updater
+from telegram.ext import Application, BasePersistence, BaseUpdateProcessor, CallbackContext, ContextTypes, Updater
 
 from src.bot.exceptions import JobQueueNotFoundError
 from src.utils.bb_provider import BBProvider

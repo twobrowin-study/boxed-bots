@@ -87,11 +87,16 @@ async def _perform_notifications(app: BBApplication) -> None:
 
                 logger.debug(f"Performing notification {notification_to_perform.id=} to user {user.id=}")
 
-                await send_replyable_condition_message_to_user(
-                    app=app,
-                    user=user,
-                    reply_condition_message=notification_to_perform.reply_condition_message,
-                )
+                try:
+                    await send_replyable_condition_message_to_user(
+                        app=app,
+                        user=user,
+                        reply_condition_message=notification_to_perform.reply_condition_message,
+                    )
+                except Exception:
+                    logger.debug(
+                        f"Could not perform notification {notification_to_perform.id=} to user {user.id=} for unknown reason"
+                    )
 
             for normal_group in await session.scalars(select(Group).where(Group.status == GroupStatusEnum.NORMAL)):
                 logger.debug(

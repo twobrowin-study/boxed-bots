@@ -2,7 +2,6 @@ import io
 import zipfile
 from datetime import datetime
 
-import filetype
 import pandas as pd
 from jinja2 import Template
 from loguru import logger
@@ -164,19 +163,7 @@ async def upload_aproved_passes_zip_document_handler(update: Update, context: Co
 
     for zip_photo in zip_photos_names:
         zip_photo_bio = io.BytesIO(zip_photos.read(zip_photo))
-
-        try:
-            content_type = filetype.guess_mime(zip_photo_bio)
-        except TypeError:
-            content_type = None
-
-        zip_photo_bio.seek(0)
-        await app.provider.minio.upload(
-            bucket=passes_bucket,
-            filename=zip_photo,
-            bio=zip_photo_bio,
-            content_type=content_type or "application/octet-stream",
-        )
+        await app.provider.minio.upload_guessed(bucket=passes_bucket, filename=zip_photo, bio=zip_photo_bio)
 
     await message.reply_markdown(
         await Template(

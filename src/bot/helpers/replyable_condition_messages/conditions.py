@@ -6,7 +6,7 @@ from src.utils.db_model import Field, ReplyableConditionMessage, User, UserField
 
 def compound_select_user_awaliable_replyable_condition_messages(
     user: User,
-) -> CompoundSelect:
+) -> CompoundSelect:  # type: ignore
     """
     Select запрос для получения доступных пользователю сообщений с условием отправки
 

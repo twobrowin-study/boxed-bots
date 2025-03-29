@@ -3,13 +3,13 @@
 # 0) Взять секреты из vault и добавить SSH ключи в known_hosts              #
 #############################################################################
 
-- name: Pull secrets from vault
-  hosts: all
-  gather_facts: false
-  tags:
-    - always
-  roles:
-    - role: bmstu.vats.init
+# - name: Pull secrets from vault
+#   hosts: all
+#   gather_facts: false
+#   tags:
+#     - always
+#   roles:
+#     - role: bmstu.vats.init
 
 #############################################################################
 # 1) Запуск сервисов                                                        #

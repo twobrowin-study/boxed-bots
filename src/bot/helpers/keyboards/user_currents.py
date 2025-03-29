@@ -51,7 +51,7 @@ async def get_user_current_keyboard(app: BBApplication, user: User) -> ReplyKeyb
                         (KeyboardKey.status == KeyboardKeyStatusEnum.DEFERRED)
                         & (KeyboardKey.branch_id.is_(None))
                         & (KeyboardKey.reply_condition_message_id.is_(None))
-                        & (user.deferred_field_id is not None)
+                        & (user.deferred_field_id is not None)  # type: ignore
                     )
                 )
                 .where(KeyboardKey.parent_key_id == user.curr_keyboard_key_parent_id)
