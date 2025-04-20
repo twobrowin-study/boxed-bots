@@ -147,7 +147,7 @@ services:
           - node.hostname == {{ placement.keycloak_postgres }}
 
   bmstu-alumni:
-    image: twobrowin/boxed-bots-si:2.3.3
+    image: twobrowin/boxed-bots-si:2.3.4
     logging: *default-logging
     ports:
       - target:    9000
