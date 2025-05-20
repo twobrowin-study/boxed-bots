@@ -118,7 +118,7 @@ ansible -i deploy/alumni/inventory.yaml all --module-name include_role --args na
 ansible-playbook deploy/alumni/playbooks/_02_deploy.yaml -i deploy/alumni/inventory.yaml
 ```
 
-## Развёртывание | K8s | Mic-call
+## [Удалено] Развёртывание | K8s | Mic-call
 
 Следует создать и подготовить:
 * Неймспейс bmstu
