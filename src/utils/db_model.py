@@ -611,7 +611,7 @@ class Settings(Base):
     user_pass_availability_field_plain: Mapped[str] = mapped_column()
     """Булево поле, разрешающее пользователю получить пропуск"""
 
-    user_pass_message_plain: Mapped[str] = mapped_column()
+    user_pass_message_j2_template: Mapped[str] = mapped_column()
     """Сообщение, посылаемое вместе с пропуском пользователя"""
     user_pass_removed_message_plain: Mapped[str] = mapped_column()
     """Сообщение, высылаемое в случае если запланирована доставка сообщения с пропуском, но пропуска нет"""

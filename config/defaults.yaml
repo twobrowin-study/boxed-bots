@@ -307,7 +307,7 @@ user_pass_availability_field_plain:
   description: Булево поле, разрешающее пользователю получить пропуск
   value: Пропуск доступен
 
-user_pass_message_plain:
+user_pass_message_j2_template:
   description: Сообщение, посылаемое вместе с пропуском пользователя
   value: Мы подготовили макет твоего пропуска!
 

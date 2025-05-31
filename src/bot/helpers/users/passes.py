@@ -1,3 +1,4 @@
+from jinja2 import Template
 from loguru import logger
 from sqlalchemy import select, update
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -104,10 +105,14 @@ async def _send_approved_pass(app: BBApplication, user: User, settings: Settings
             file = None
             file_type = None
 
+        message_text = await Template(settings.user_pass_message_j2_template, enable_async=True).render_async(
+            user=user.to_plain_dict()
+        )
+
         file_id = await send_message_and_return_file_id(
             app=app,
             user=user,
-            text=settings.user_pass_message_plain,
+            text=message_text,
             file=file,
             file_type=file_type,
             filename=pass_user_field_value.value if pass_user_field_value else None,

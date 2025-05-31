@@ -85,7 +85,7 @@ class Defaults(BaseModel, extra="forbid"):
     user_pass_required_field_plain: DefaultValue
     user_pass_availability_field_plain: DefaultValue
 
-    user_pass_message_plain: DefaultValue
+    user_pass_message_j2_template: DefaultValue
     user_pass_removed_message_plain: DefaultValue
     user_pass_hint_message_plain: DefaultValue
     user_pass_unavailable_message_plain: DefaultValue

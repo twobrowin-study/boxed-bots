@@ -57,25 +57,28 @@ async def job(context: CallbackContext) -> None:  # type: ignore
 
                 if field.type == FieldTypeEnum.FULL_TEXT:
                     message_text = await message_template.render_async(
+                        user.to_plain_dict(),
                         field={
                             "key": field.key,
                             "value": user_field_value.value,
-                        }
+                        },
                     )
                 elif field.type == FieldTypeEnum.BOOLEAN:
                     message_text = await message_template.render_async(
+                        user.to_plain_dict(),
                         field={
                             "key": field.key,
                             "value": app.provider.config.i18n.yes
                             if user_field_value.value == "true"
                             else app.provider.config.i18n.no,
-                        }
+                        },
                     )
                 else:
                     message_text = await message_template.render_async(
+                        user.to_plain_dict(),
                         field={
                             "key": field.key,
-                        }
+                        },
                     )
 
                 file, file_type = await prepare_field_file_value_and_type(app, field, user_field_value)
@@ -111,6 +114,6 @@ async def _get_messsage_template(app: BBApplication, field: Field, user_field_va
     settings = await app.provider.settings
     if field.key == settings.user_pass_field_plain:
         if user_field_value.value:
-            return Template(settings.user_pass_message_plain, enable_async=True)
+            return Template(settings.user_pass_message_j2_template, enable_async=True)
         return Template(settings.user_pass_removed_message_plain, enable_async=True)
     return Template(settings.user_personal_notification_message_j2_template, enable_async=True)
