@@ -147,10 +147,12 @@ reply_condition_bool_field_id: Условие ответа
 reply_condition_message_id: Сообщение
 reply_condition_message_name: Обозначение
 reply_keyboard_keys: Клавиши
-reply_status_replies: Ответы
+reply_status_replies: Ответы/Следующие вопросы
 reply_type_branch_start: Ветка вопросов
+reply_type_fast_answer_with_next: Один вопрос и переход
 reply_type_fast_answer: Быстрый ответ
 reply_type_full_text_answer: Один вопрос
+reply_type_pass: Клавиатура пропуска
 reply_type: Тип ответа
 replyable_condition_messages: Сообщения с условиями и ответами
 report_order: Номер в отчёте пропусков

@@ -533,6 +533,9 @@ class Settings(Base):
     user_change_reply_message_j2_template: Mapped[str] = mapped_column()
     """Шаблон подтверждения пользователю об изменении поля"""
 
+    user_fast_answer_reply_message_j2_template: Mapped[str] = mapped_column()
+    """Шаблон подтверждения пользователю об изменении поля"""
+
     user_skip_button_plain: Mapped[str] = mapped_column()
     """Текст кнопки пропуска вопроса"""
 

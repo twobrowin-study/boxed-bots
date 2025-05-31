@@ -9,7 +9,7 @@ from src.bot.helpers.replyable_condition_messages.conditions import (
 )
 from src.bot.helpers.replyable_condition_messages.keyboards import get_user_reply_condition_message_reply_keyboard
 from src.bot.telegram.application import BBApplication
-from src.utils.db_model import ReplyableConditionMessage, User
+from src.utils.db_model import ReplyableConditionMessage, Settings, User
 
 
 async def send_replyable_condition_message(
@@ -90,6 +90,7 @@ async def send_replyable_condition_message_to_user(
     app: BBApplication,
     user: User,
     reply_condition_message: ReplyableConditionMessage,
+    settings: Settings,
 ) -> None:
     """
     Отправить пользователю сообщение с условием
@@ -110,7 +111,7 @@ async def send_replyable_condition_message_to_user(
                 logger.debug(f"User {user.id=} cannot get Replyable Condition Message {reply_condition_message.id=}")
                 return
 
-    reply_keyboard = await get_user_reply_condition_message_reply_keyboard(app, user, reply_condition_message)
+    reply_keyboard = await get_user_reply_condition_message_reply_keyboard(app, user, reply_condition_message, settings)
     if not reply_keyboard:
         reply_keyboard = await get_user_current_keyboard(app, user)
 

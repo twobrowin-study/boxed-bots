@@ -126,6 +126,10 @@ class ReplyTypeEnum(Enum):
     """Полнотекстовый ответ на один вопрос"""
     FAST_ANSWER = "fast_answer"
     """Короткий ответ на вопрос (выбор кнопками)"""
+    PASS = "pass"
+    """Показать кнопки регистрации пропуска"""
+    FAST_ANSWER_WITH_NEXT = "fast_answer_with_next"
+    """Короткий ответ на вопрос (выбор кнопками) и переход к следующему сообщению"""
 
 
 class KeyboardKeyStatusEnum(Enum):

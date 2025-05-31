@@ -184,3 +184,7 @@ class ChangeFieldNoQuestionError(Exception):
 
 class UserAfterChangeNotFoundError(Exception):
     """Пользователь после обновления значений не найден... странно"""
+
+
+class NextReplyConditionMessageAfterFastAnswerWasNotFoundError(Exception):
+    """Следующее сообщение не найдено после ответа пользователя на быстрое сообщение"""

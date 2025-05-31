@@ -44,6 +44,7 @@ class Defaults(BaseModel, extra="forbid"):
     user_registered_help_or_restart_message_plain: DefaultValue
 
     user_change_reply_message_j2_template: DefaultValue
+    user_fast_answer_reply_message_j2_template: DefaultValue
     user_skip_button_plain: DefaultValue
     user_defer_button_plain: DefaultValue
     user_defered_message_plain: DefaultValue
@@ -283,8 +284,10 @@ class I18n(BaseModel, extra="forbid"):
     reply_keyboard_keys: str
     reply_status_replies: str
     reply_type_branch_start: str
+    reply_type_fast_answer_with_next: str
     reply_type_fast_answer: str
     reply_type_full_text_answer: str
+    reply_type_pass: str
     reply_type: str
     replyable_condition_messages: str
     report_order: str
@@ -337,7 +340,7 @@ class ConfigYaml(BaseSettings):
 
     app_home: str
 
-    path_secure: str
+    path_secure: bool
     path_prefix: str
 
     tg_token: str

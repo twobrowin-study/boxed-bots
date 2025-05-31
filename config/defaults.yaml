@@ -103,6 +103,10 @@ user_change_reply_message_j2_template:
   description: Шаблон подтверждения пользователю об изменении поля
   value: Значение *{{ state }}* обновлено
 
+user_fast_answer_reply_message_j2_template:
+  description: Шаблон сообщения пользователю о выбраном варианте ответа
+  value: "Выбрано: *{{ answer }}*"
+
 user_skip_button_plain:
   description: Текст кнопки пропуска вопроса
   value: ⏭ Пропустить

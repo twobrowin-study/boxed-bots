@@ -1,3 +1,4 @@
+from jinja2 import Template
 from loguru import logger
 from sqlalchemy import select
 from telegram import Update
@@ -8,13 +9,17 @@ from src.bot.exceptions import (
     FastAnswerNoReplyableConditionMessageError,
     FastAnswerNotEnoughReplyAnswersError,
     FastAnswerNotEnoughValuesError,
+    NextReplyConditionMessageAfterFastAnswerWasNotFoundError,
 )
 from src.bot.helpers.fields.values.calculate import user_calculate_after_registration_fields
 from src.bot.helpers.fields.values.upsert import user_upsert_string_field_value
 from src.bot.helpers.keyboards.user_currents import get_user_current_keyboard
+from src.bot.helpers.replyable_condition_messages.sends import send_replyable_condition_message_to_user
 from src.bot.helpers.users import get_user_callback_query_data_send_strange_error_and_rise
+from src.bot.telegram.application import BBApplication
 from src.bot.telegram.callback_constants import UserFastAnswerReplyCallback
-from src.utils.db_model import Field, ReplyableConditionMessage
+from src.utils.custom_types import ReplyTypeEnum
+from src.utils.db_model import Field, ReplyableConditionMessage, Settings, User
 
 
 async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -62,18 +67,43 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not reply_message.reply_status_replies:
         raise FastAnswerNotEnoughReplyAnswersError
     try:
-        answer_text = reply_message.reply_status_replies.split("\n")[answer_idx]
+        answer_text_or_next_reply_message_name = reply_message.reply_status_replies.split("\n")[answer_idx]
     except Exception as e:
         raise FastAnswerNotEnoughReplyAnswersError from e
 
     # Отправка пользователю сообщения с ответом
-    await callback_query_message.reply_markdown(
-        text=answer_text,
-        reply_markup=await get_user_current_keyboard(app, user),
-    )
+    if reply_message.reply_type == ReplyTypeEnum.FAST_ANSWER:
+        await callback_query_message.reply_markdown(
+            text=answer_text_or_next_reply_message_name,
+            reply_markup=await get_user_current_keyboard(app, user),
+        )
+
+    # Отправка пользователю:
+    # - Выбранного им варианта ответа
+    # - Следующего сообщения с ответом
+    # - Удаление клавиатуры предыдущего сообщения
+    elif reply_message.reply_type == ReplyTypeEnum.FAST_ANSWER_WITH_NEXT:
+        selected_text = await Template(
+            settings.user_fast_answer_reply_message_j2_template, enable_async=True
+        ).render_async(answer=field_value)
+        await callback_query_message.reply_markdown(selected_text)
+        await _send_next_reply_message(app, user, answer_text_or_next_reply_message_name, settings)
+        await callback_query_message.edit_reply_markup(reply_markup=None)
 
     # Сохранение ответа
     await user_upsert_string_field_value(app, user, field, callback_query_message, field_value)
 
     # Расчитать поля пользователя
     await user_calculate_after_registration_fields(app, user)
+
+
+async def _send_next_reply_message(
+    app: BBApplication, user: User, next_reply_message_name: str, settings: Settings
+) -> None:
+    async with app.provider.db_sessionmaker() as session:
+        next_reply_message = await session.scalar(
+            select(ReplyableConditionMessage).where(ReplyableConditionMessage.name == next_reply_message_name)
+        )
+    if not next_reply_message:
+        raise NextReplyConditionMessageAfterFastAnswerWasNotFoundError
+    await send_replyable_condition_message_to_user(app, user, next_reply_message, settings)

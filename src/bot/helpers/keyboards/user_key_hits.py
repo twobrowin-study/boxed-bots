@@ -82,7 +82,7 @@ async def _perform_key_hit_action(
 ) -> None:
     """Обработать событие нажатия на клавиатуру"""
     if keyboard_key.status == KeyboardKeyStatusEnum.NORMAL and keyboard_key.reply_condition_message:
-        await send_replyable_condition_message_to_user(app, user, keyboard_key.reply_condition_message)
+        await send_replyable_condition_message_to_user(app, user, keyboard_key.reply_condition_message, settings)
 
     elif keyboard_key.status == KeyboardKeyStatusEnum.BACK:
         await message.reply_markdown(keyboard_key.key, reply_markup=await get_user_current_keyboard(app, user))

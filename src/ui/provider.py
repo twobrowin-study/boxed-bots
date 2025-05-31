@@ -152,14 +152,15 @@ class Provider(BBProvider):
                         {
                             "key": settings.user_name_field_plain,
                             "status": FieldStatusEnum.NORMAL,
-                            "order_place": 0,
+                            "order_place": 1,
                             "branch_id": first_field_branch_id,
                             "question_markdown_or_j2_template": settings.user_name_field_plain,
+                            "is_skippable": False,
                         },
                         {
                             "key": settings.user_pass_required_field_plain,
                             "status": FieldStatusEnum.NORMAL,
-                            "order_place": 1,
+                            "order_place": 2,
                             "branch_id": first_field_branch_id,
                             "question_markdown_or_j2_template": settings.user_pass_required_field_plain,
                             "is_skippable": True,
@@ -193,15 +194,16 @@ class Provider(BBProvider):
                             "key": settings.user_pass_availability_field_plain,
                             "status": FieldStatusEnum.JINJA2_FROM_USER_ON_CREATE,
                             "type": FieldTypeEnum.BOOLEAN,
-                            "order_place": 0,
+                            "order_place": 1,
                             "branch_id": pass_branch_id,
                             "question_markdown_or_j2_template": "true",
                         },
                         {
                             "key": settings.user_pass_field_plain,
                             "status": FieldStatusEnum.PERSONAL_NOTIFICATION,
-                            "order_place": 1,
+                            "order_place": 2,
                             "branch_id": pass_branch_id,
+                            "question_markdown_or_j2_template": None,
                         },
                     ]
                 )

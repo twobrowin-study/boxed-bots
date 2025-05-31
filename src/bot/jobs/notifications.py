@@ -92,6 +92,7 @@ async def _perform_notifications(app: BBApplication) -> None:
                         app=app,
                         user=user,
                         reply_condition_message=notification_to_perform.reply_condition_message,
+                        settings=settings,
                     )
                 except Exception:
                     logger.debug(

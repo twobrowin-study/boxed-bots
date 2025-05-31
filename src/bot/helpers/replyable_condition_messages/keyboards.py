@@ -2,6 +2,7 @@ from loguru import logger
 from sqlalchemy import select
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+from src.bot.helpers.users.passes import construct_pass_submit_inline_keyboard
 from src.bot.telegram.application import BBApplication
 from src.bot.telegram.callback_constants import (
     UserFastAnswerReplyCallback,
@@ -9,13 +10,14 @@ from src.bot.telegram.callback_constants import (
     UserStartBranchReplyCallback,
 )
 from src.utils.custom_types import FieldTypeEnum, ReplyTypeEnum
-from src.utils.db_model import Field, ReplyableConditionMessage, User, UserFieldValue
+from src.utils.db_model import Field, ReplyableConditionMessage, Settings, User, UserFieldValue
 
 
-async def get_user_reply_condition_message_reply_keyboard(
+async def get_user_reply_condition_message_reply_keyboard(  # noqa: PLR0911
     app: BBApplication,
     user: User,
     reply_condition_message: ReplyableConditionMessage,
+    settings: Settings,
 ) -> InlineKeyboardMarkup | None:
     """
     Получить inline-клавиатуру для сообщения с условием
@@ -24,7 +26,11 @@ async def get_user_reply_condition_message_reply_keyboard(
     * app: BBApplication - Приложение
     * user: User - Пользователь, для которого следует получить клавиатуру
     * reply_condition_message: ReplyableConditionMessage - Сообщение c условием
+    * settings: Settings - Настройки
     """
+    if reply_condition_message.reply_type == ReplyTypeEnum.PASS:
+        return await construct_pass_submit_inline_keyboard(app, user, settings)
+
     if not reply_condition_message.reply_keyboard_keys:
         return None
 
@@ -65,7 +71,7 @@ async def get_user_reply_condition_message_reply_keyboard(
             ]
         )
 
-    if reply_condition_message.reply_type == ReplyTypeEnum.FAST_ANSWER:
+    if reply_condition_message.reply_type in [ReplyTypeEnum.FAST_ANSWER, ReplyTypeEnum.FAST_ANSWER_WITH_NEXT]:
         return InlineKeyboardMarkup(
             [
                 [

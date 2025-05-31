@@ -102,7 +102,12 @@ async def post_replyable_condition_messages(request: Request) -> JSONResponse:
         reply_keyboard_keys: str | None = replyable_condition_message.get("reply_keyboard_keys")
         reply_status_replies: str | None = replyable_condition_message.get("reply_status_replies")
 
-        if reply_type and (not reply_keyboard_keys or not reply_status_replies):
+        if reply_type in [
+            ReplyTypeEnum.FULL_TEXT_ANSWER,
+            ReplyTypeEnum.FAST_ANSWER,
+            ReplyTypeEnum.FAST_ANSWER_WITH_NEXT,
+            ReplyTypeEnum.BRANCH_START,
+        ] and (not reply_keyboard_keys or not reply_status_replies):
             raise HTTPException(
                 500,
                 f"{error_prefix} {provider.config.i18n.error_reply_type_is_set_but_there_is_no_reply_keyboard_keys_or_reply_status_replies}",
@@ -119,6 +124,7 @@ async def post_replyable_condition_messages(request: Request) -> JSONResponse:
             in [
                 ReplyTypeEnum.FULL_TEXT_ANSWER,
                 ReplyTypeEnum.FAST_ANSWER,
+                ReplyTypeEnum.FAST_ANSWER_WITH_NEXT,
             ]
             and not reply_answer_field_id
         ):

@@ -1,8 +1,8 @@
 services:
   box-bot:
-    image: twobrowin/boxed-bots-si:2.3.4
+    image: twobrowin/boxed-bots-si:2.4.0
     ports:
-      - 8080:8080
+      # - 8080:8080
       - 5432:5432
       - 9000:9000
       - 9001:9001
