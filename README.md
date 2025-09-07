@@ -131,7 +131,7 @@ ansible-playbook deploy/alumni/playbooks/_02_deploy.yaml -i deploy/alumni/invent
 helm upgrade --install --debug mic-call ./deploy/charts/ -n bmstu -f ./deploy/charts/values_mic-call.yaml
 ```
 
-## Развёртывание | K8s | Baumanec-call
+## [Удалено] Развёртывание | K8s | Baumanec-call-2025
 
 Следует создать и подготовить:
 * Неймспейс baumanec
