@@ -60,6 +60,14 @@ containers:
         key: keycloak_secret
   - name: KEYCLOAK_VERIFY
     value: "true"
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100M
+    limits:
+      cpu: 200m
+      memory: 200M
 
 ingress:
   host: mic-call.boxed-bots.ru

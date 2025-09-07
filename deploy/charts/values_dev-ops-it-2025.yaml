@@ -20,19 +20,19 @@ containers:
   - name: TG_TOKEN
     valueFrom:
       secretKeyRef:
-        name: baumanec-call-2025
+        name: dev-ops-it-2025
         key: tg_token
 
   - name: POSTGRES_HOST
     value: postgres.boxed-bots.ru:5432
   - name: POSTGRES_DB
-    value: baumanec-call-2025
+    value: dev-ops-it-2025
   - name: POSTGRES_USER
-    value: baumanec-call-2025
+    value: dev-ops-it-2025
   - name: POSTGRES_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: baumanec-call-2025
+        name: dev-ops-it-2025
         key: postgres_password
 
   - name: MINIO_HOST
@@ -40,11 +40,11 @@ containers:
   - name: MINIO_SECURE
     value: "true"
   - name: MINIO_ACCESS_KEY
-    value: baumanec-call-2025
+    value: dev-ops-it-2025
   - name: MINIO_SECRET_KEY
     valueFrom:
       secretKeyRef:
-        name: baumanec-call-2025
+        name: dev-ops-it-2025
         key: minio_secret_key
 
   - name: KEYCLOAK_URL
@@ -52,11 +52,11 @@ containers:
   - name: KEYCLOAK_REALM
     value: master
   - name: KEYCLOAK_CLIENT
-    value: baumanec-call-2025
+    value: dev-ops-it-2025
   - name: KEYCLOAK_SECRET
     valueFrom:
       secretKeyRef:
-        name: baumanec-call-2025
+        name: dev-ops-it-2025
         key: keycloak_secret
   - name: KEYCLOAK_VERIFY
     value: "true"
@@ -70,4 +70,4 @@ containers:
       memory: 200M
 
 ingress:
-  host: baumanec-call-2025.boxed-bots.ru
+  host: dev-ops-it-2025.boxed-bots.ru
