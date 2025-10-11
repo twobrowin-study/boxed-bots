@@ -1,5 +1,5 @@
 collections:
-  - name: https://vats_requirements:<TOKEN>@gitlab.bmstu.ru/infra/vats.git
+  - name: https://gitlab.bmstu.ru/infra/vats.git
     type: git
     version: main
   
