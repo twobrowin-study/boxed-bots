@@ -18,7 +18,7 @@
 - name: Template copy services certs hook
   hosts: obtain_certs
   tags:
-    - always
+    - obtain_certs
   become: true
   tasks:
     - name: Create letsencrypt hooks directory
