@@ -2,8 +2,13 @@ all:
   hosts:
     alumni:
   vars:
-    vault_path_inventory: alumni/data/deploy,inventory-secrets.yaml
-    vault_path_secrets:   alumni/data/deploy,secrets.yaml
+    vault_path_inventory: _00_vms/data/alumni,inventory-secrets.yaml
+    vault_path_secrets:
+      - _01_deploys/data/alumni,misc-secrets.yaml
+      - _01_deploys/data/alumni,tg-secrets.yaml
+      - _01_deploys/data/alumni,keycloak-secrets.yaml
+      - _01_deploys/data/alumni,postgres-secrets.yaml
+      - _01_deploys/data/alumni,minio-secrets.yaml
 
     swarm_manager_host: alumni
     home: "/home/{{ ansible_user }}"
