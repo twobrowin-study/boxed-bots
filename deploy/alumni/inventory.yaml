@@ -2,8 +2,8 @@ all:
   hosts:
     alumni:
   vars:
-    vault_path_inventory: bmstu-alumni/data/main,inventory-secrets.yaml
-    vault_path_secrets:   bmstu-alumni/data/main,secrets.yaml
+    vault_path_inventory: alumni/data/deploy,inventory-secrets.yaml
+    vault_path_secrets:   alumni/data/deploy,secrets.yaml
 
     swarm_manager_host: alumni
     home: "/home/{{ ansible_user }}"
