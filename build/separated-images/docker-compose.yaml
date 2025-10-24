@@ -1,4 +1,4 @@
-services:  
+services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
     ports:
@@ -17,16 +17,16 @@ services:
     command: server /data --console-address ":9001"
     env_file:
       - ../../.env
-  
+
   postgres:
     image: postgres:15.12
     ports:
       - 5432:5432
     env_file:
       - ../../.env
-  
+
   ui:
-    image: twobrowin/boxed-bots-ui:2.4.2
+    image: twobrowin/boxed-bots-ui:2.4.3
     ports:
       - 8080:8080
     env_file:
@@ -35,9 +35,9 @@ services:
       - keycloak
       - postgres
       - minio
-  
+
   bot:
-    image: twobrowin/boxed-bots-bot:2.4.2
+    image: twobrowin/boxed-bots-bot:2.4.3
     env_file:
       - ../../.env
     depends_on:

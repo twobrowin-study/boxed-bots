@@ -97,10 +97,10 @@ async def _perform_key_hit_action(
         await send_promocodes(app, user, message, settings)
 
     elif keyboard_key.status == KeyboardKeyStatusEnum.ME:
-        await user_send_me_information(app, user, keyboard_key.branch_id, message, "me_plain")
+        await user_send_me_information(app, user, keyboard_key, message, "me_plain")
 
     elif keyboard_key.status == KeyboardKeyStatusEnum.ME_CHANGE:
-        await user_send_me_information(app, user, keyboard_key.branch_id, message, "me_change")
+        await user_send_me_information(app, user, keyboard_key, message, "me_change")
 
     elif keyboard_key.status == KeyboardKeyStatusEnum.PASS:
         await user_send_pass_information(app, user, message, settings)

@@ -11,13 +11,13 @@ from src.bot.helpers.telegram.send_message_and_return_file_id import send_messag
 from src.bot.telegram.application import BBApplication
 from src.bot.telegram.callback_constants import UserChangeFieldCallback
 from src.utils.custom_types import FieldStatusEnum, FieldTypeEnum, UserFieldDataPrepared
-from src.utils.db_model import Field, User, UserFieldValue
+from src.utils.db_model import Field, KeyboardKey, User, UserFieldValue
 
 
 async def user_send_me_information(
     app: BBApplication,
     user: User,
-    field_branch_id: Column[int | None],
+    keyboard_key: KeyboardKey,
     message: Message,
     context: Literal["me_plain", "me_change"],
 ) -> None:
@@ -27,7 +27,7 @@ async def user_send_me_information(
     Параметры:
      * app: BBApplication - Приложение
      * user: User - Пользователь
-     * field_branch_id: Column[int | None] - Идентификатор ветки пользователя, по которой следует отображать данные
+     * keyboard_key: KeyboardKey - Нажатая клавиша пользователем
      * message: Message - Сообщение, на которое следует ответить
      * context: Literal["me_plain", "me_change"] - Контекст отправки информации о пользователе:
        * "me_plain" - Полское представление, без отправки кнопок пользователю
@@ -37,7 +37,7 @@ async def user_send_me_information(
     logger.debug(f"Sending me information to user {user.id=} with context {context=}")
 
     file_descriptor, text, reply_markup = await prepare_me_information_message_documents_photos_text_and_reply_keyboard(
-        app, user, field_branch_id
+        app, user, keyboard_key.branch_id
     )
 
     for field, file, filename in file_descriptor:
@@ -61,7 +61,8 @@ async def user_send_me_information(
                 await _user_field_value_set_value_field_id(app, user, field, file_id)
 
     await message.reply_markdown(
-        text=text, reply_markup=reply_markup if context == "me_change" else await get_user_current_keyboard(app, user)
+        text=text if text else keyboard_key.key,
+        reply_markup=reply_markup if context == "me_change" else await get_user_current_keyboard(app, user),
     )
 
 
