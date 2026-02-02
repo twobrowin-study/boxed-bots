@@ -118,41 +118,15 @@ ansible -i deploy/alumni/inventory.yaml all --module-name include_role --args na
 ansible-playbook deploy/alumni/playbooks/_02_deploy.yaml -i deploy/alumni/inventory.yaml
 ```
 
-## [Удалено] Развёртывание | K8s | Mic-call
-
-Следует создать и подготовить:
-* Неймспейс bmstu
-* Доступ в Keycloak, приложение mic-call с ролью ui-user
-* Доступ в Minio, ключ доступа mic-call
-* Доступ в Postgres, пользователь и БД от его имени mic-call
-* Заполнить секреты и переменные окружения
-
-```bash
-helm upgrade --install --debug mic-call ./deploy/charts/ -n bmstu -f ./deploy/charts/values_mic-call.yaml
-```
-
-## [Удалено] Развёртывание | K8s | Baumanec-call-2025
+## Развёртывание | K8s | Baumanec-call-2026
 
 Следует создать и подготовить:
 * Неймспейс baumanec
-* Доступ в Keycloak, приложение baumanec-call-2025 с ролью ui-user
-* Доступ в Minio, ключ доступа baumanec-call-2025
-* Доступ в Postgres, пользователь и БД от его имени baumanec-call-2025
+* Доступ в Keycloak, приложение baumanec-call-2026 с ролью ui-user
+* Доступ в Minio, ключ доступа baumanec-call-2026
+* Доступ в Postgres, пользователь и БД от его имени baumanec-call-2026
 * Заполнить секреты и переменные окружения
 
 ```bash
-helm upgrade --install --debug baumanec-call-2025 ./deploy/charts/ -n baumanec -f ./deploy/charts/values_baumanec-call-2025.yaml
-```
-
-## Развёртывание | K8s | Dev-ops-it-2025
-
-Следует создать и подготовить:
-* Неймспейс bmstu
-* Доступ в Keycloak, приложение dev-ops-it-2025 с ролью ui-user
-* Доступ в Minio, ключ доступа dev-ops-it-2025
-* Доступ в Postgres, пользователь и БД от его имени dev-ops-it-2025
-* Заполнить секреты и переменные окружения
-
-```bash
-helm upgrade --install --debug dev-ops-it-2025 ./deploy/charts/ -n bmstu -f ./deploy/charts/values_dev-ops-it-2025.yaml
+helm upgrade --install --debug baumanec-call-2026 ./deploy/charts/ -n baumanec -f ./deploy/charts/values_baumanec-call-2026.yaml
 ```
