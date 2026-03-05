@@ -18,13 +18,13 @@
 
 ```bash
 # Сборка общего контейнера
-docker build . --push -f build/single-image/Dockerfile -t twobrowin/boxed-bots-si:2.x.x
+docker build --platform linux/amd64 . --push -f build/single-image/Dockerfile -t twobrowin/boxed-bots-si:2.x.x
 
 # Сборка контейнера UI
-docker build . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=ui -t twobrowin/boxed-bots-ui:2.x.x
+docker build --platform linux/amd64 . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=ui -t twobrowin/boxed-bots-ui:2.x.x
 
 # Сборка контейнера бота
-docker build . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=bot -t twobrowin/boxed-bots-bot:2.x.x
+docker build --platform linux/amd64 . --push -f build/separated-images/Dockerfile --build-arg APP_PATH=bot -t twobrowin/boxed-bots-bot:2.x.x
 ```
 
 ## Локальная сборка и отладка

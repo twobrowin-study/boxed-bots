@@ -111,9 +111,6 @@ class Defaults(BaseModel, extra="forbid"):
 
     user_number_of_last_news_to_show_int: DefaultValue
 
-    user_defer_button_plain: DefaultValue
-    user_defered_message_plain: DefaultValue
-
     def model_dump_anythig(self, what_to_dump: str) -> dict[str, str]:
         full_dump: dict[str, dict[str, str]] = self.model_dump()
         return {key: obj[what_to_dump] for key, obj in full_dump.items()}
@@ -144,8 +141,6 @@ class I18n(BaseModel, extra="forbid"):
     check_future_year: str
     condition_bool_field_id: str
     data_empty: str
-    description: str
-    description: str
     description: str
     document_bucket: str
     document: str
@@ -253,10 +248,13 @@ class I18n(BaseModel, extra="forbid"):
     notification_planned: str
     notification_to_deliver: str
     notifications: str
-    notifications: str
     order_place: str
     parent_key_id: str
     pass_management: str
+    pass_status_after_receiving: str
+    pass_status_approved: str
+    pass_status_not_submited: str
+    pass_status_submited: str
     personal_notification_delivered: str
     personal_notification_inactive: str
     personal_notification_to_deliver: str
@@ -317,7 +315,6 @@ class I18n(BaseModel, extra="forbid"):
     validation_error_markdown: str
     validation_regexp: str
     validation_remove_regexp: str
-    value: str
     value: str
 
 

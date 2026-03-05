@@ -97,10 +97,13 @@ async def send_replyable_condition_message_to_user(
 
     Вычисляет условие отправки и отправляемую клавиатуру для пользователя или подставляет текущую клавиатуру пользователя
 
+    Если у сообщения задано какой должен быть статус пропуска у пользователя - создаёт его
+
     Параметры:
     * app: BBApplication - Приложение
     * user: User - Объект пользователя
     * reply_condition_message: ReplyableConditionMessage - Объект сообщения
+    * settings: Settings - Настройки приложения
     """
     if reply_condition_message.condition_bool_field:
         async with app.provider.db_sessionmaker() as session:
@@ -118,3 +121,15 @@ async def send_replyable_condition_message_to_user(
     logger.debug(f"Sending Replyable Condition Message {reply_condition_message.id=} to user {user.id=}")
 
     await send_replyable_condition_message(app, user.chat_id, reply_condition_message, reply_keyboard=reply_keyboard)
+
+    if reply_condition_message.pass_status_after_receiving:
+        async with app.provider.db_sessionmaker() as session:
+            logger.debug(
+                f"Setting pass status {reply_condition_message.pass_status_after_receiving} to user {user.id=}"
+            )
+            await session.execute(
+                update(User)
+                .where(User.id == user.id)
+                .values(pass_status=reply_condition_message.pass_status_after_receiving)
+            )
+            await session.commit()

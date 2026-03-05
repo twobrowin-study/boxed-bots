@@ -1,6 +1,6 @@
+
 'no': Нет
 'yes': Да
-
 answer_options: Варианты ответа
 append: Добавить
 bot_is_off: Выключён
@@ -122,6 +122,10 @@ notifications: Оповещения
 order_place: Порядок
 parent_key_id: Родительская кнопка
 pass_management: Управление пропусками
+pass_status_after_receiving: Статус пропуска после получения сообщения
+pass_status_approved: Пропуск согласован
+pass_status_not_submited: Пропуск не запрошен
+pass_status_submited: Пропуск запрошен
 personal_notification_delivered: ✅ Доставлено
 personal_notification_inactive: ❌ Не активно
 personal_notification_to_deliver: 🔷 Запланирована доставка

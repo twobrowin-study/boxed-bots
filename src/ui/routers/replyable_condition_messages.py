@@ -18,7 +18,7 @@ from src.ui.helpers import (
     try_to_save_attrs,
 )
 from src.ui.keycloak import KEYCLOAK_ROLE, KeycloakUser
-from src.utils.custom_types import FieldStatusEnum, FieldTypeEnum, ReplyTypeEnum
+from src.utils.custom_types import FieldStatusEnum, FieldTypeEnum, PassSubmitStatusEnum, ReplyTypeEnum
 from src.utils.db_model import (
     Field,
     FieldBranch,
@@ -53,6 +53,7 @@ async def get_replyable_condition_messages(
         field_branches=field_branches,
         field_type_enum=FieldTypeEnum,
         field_status_enum=FieldStatusEnum,
+        pass_submit_status_enum=PassSubmitStatusEnum,
     )
 
 
@@ -65,7 +66,9 @@ async def post_replyable_condition_messages(request: Request) -> JSONResponse:
 
     logger.debug(f"Got replyable_condition_messages update request with {request_data=}")
 
-    replyable_condition_messages_attrs = prepare_attrs_object_from_request(request_data, reply_type=ReplyTypeEnum)
+    replyable_condition_messages_attrs = prepare_attrs_object_from_request(
+        request_data, reply_type=ReplyTypeEnum, pass_status_after_receiving=PassSubmitStatusEnum
+    )
 
     for idx, replyable_condition_message in replyable_condition_messages_attrs.items():
         error_prefix = provider.prepare_error_prefix(

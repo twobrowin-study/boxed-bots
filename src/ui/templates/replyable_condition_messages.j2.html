@@ -1,7 +1,7 @@
 {% extends "base.j2.html" %}
 
 {% block content %}
-  <table id="replyable_condition_messages-table" class="table table-striped align-middle">
+  <table id="replyable_condition_messages-table" class="table table-striped align-middle" style="width: 170% !important">
     <thead>
       <tr>
         <th id="replyable_condition_messages-name"                         >{{ i18n.reply_condition_message_name }}</th>
@@ -16,6 +16,7 @@
         <th id="replyable_condition_messages-reply_answer_field_branch_id" >{{ i18n.reply_answer_field_branch_id }}</th>
         <th id="replyable_condition_messages-reply_keyboard_keys"          >{{ i18n.reply_keyboard_keys }}</th>
         <th id="replyable_condition_messages-reply_status_replies"         >{{ i18n.reply_status_replies }}</th>
+        <th id="replyable_condition_messages-pass_status_after_receiving"  >{{ i18n.pass_status_after_receiving }}</th>
         <th id="replyable_condition_messages-new"><button class="row-new btn btn-outline-secondary btn-sm"><i class="bi bi-plus-square"></i></button></th>
       </tr>
     </thead>
@@ -110,6 +111,19 @@
           <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_status_replies" class="row-editable">
             <textarea id="replyable_condition_messages-{{ replyable_condition_message.id }}-reply_status_replies" class="form-control" rows="7" cols="40" disabled>{{ replyable_condition_message.reply_status_replies or '' }}</textarea>
           </td>
+          <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-pass_status_after_receiving" class="row-editable">
+            <select id="replyable_condition_messages-{{ replyable_condition_message.id }}-pass_status_after_receiving-value" class="form-select" disabled>
+              <option value="None" {% if not replyable_condition_message.pass_status_after_receiving  %}selected='true'{% endif %}>{{ i18n.none }}</option>
+              {% for pass_status in pass_submit_status_enum %}
+                <option
+                  value="{{ pass_status.value }}"
+                  {% if pass_status == replyable_condition_message.pass_status_after_receiving %}selected='true'{% endif %}
+                >
+                  {{ i18n['pass_status_' + pass_status.value] }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
           <td id="replyable_condition_messages-{{ replyable_condition_message.id }}-edit"><button  class="row-edit btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square"></i></button></td>
         </tr>
       {% endfor %}
@@ -180,6 +194,16 @@
         </td>
         <td id="replyable_condition_messages-new-reply_status_replies" class="row-editable row-new-value table-info">
           <textarea id="replyable_condition_messages-new-reply_status_replies" class="form-control" rows="7" cols="40"></textarea>
+        </td>
+        <td id="replyable_condition_messages-new-pass_status_after_receiving" class="row-editable row-new-value table-info">
+          <select id="replyable_condition_messages-new-pass_status_after_receiving-value" class="form-select">
+            <option value="None" selected='true'>{{ i18n.none }}</option>
+            {% for pass_status in pass_submit_status_enum %}
+              <option value="{{ pass_status.value }}">
+                {{ i18n['pass_status_' + pass_status.value] }}
+              </option>
+            {% endfor %}
+          </select>
         </td>
         <td id="replyable_condition_messages-new-edit" class="table-info"><button  class="row-save btn btn-outline-success btn-sm"><i class="bi bi-check2-square"></i></button></td>
     </tbody>
