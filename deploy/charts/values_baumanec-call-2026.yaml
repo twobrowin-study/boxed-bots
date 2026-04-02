@@ -66,8 +66,8 @@ containers:
       cpu: 100m
       memory: 100M
     limits:
-      cpu: 200m
-      memory: 200M
+      cpu: 300m
+      memory: 300M
 
 ingress:
   host: baumanec-call-2026.boxed-bots.ru
