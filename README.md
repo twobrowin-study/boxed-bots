@@ -118,15 +118,17 @@ ansible -i deploy/alumni/inventory.yaml all --module-name include_role --args na
 ansible-playbook deploy/alumni/playbooks/_02_deploy.yaml -i deploy/alumni/inventory.yaml
 ```
 
-## Развёртывание | K8s | Baumanec-call-2026
+## Развёртывание | K8s | DevOpsIt-2026
 
 Следует создать и подготовить:
-* Неймспейс baumanec
-* Доступ в Keycloak, приложение baumanec-call-2026 с ролью ui-user
-* Доступ в Minio, ключ доступа baumanec-call-2026
-* Доступ в Postgres, пользователь и БД от его имени baumanec-call-2026
+
+* Неймспейс public
+* Доступ в Keycloak, приложение dev-ops-it-2026 с ролью ui-user
+* Доступ в Minio, ключ доступа dev-ops-it-2026
+* Доступ в Postgres, пользователь и БД от его имени dev-ops-it-2026
 * Заполнить секреты и переменные окружения
 
 ```bash
-helm upgrade --install --debug baumanec-call-2026 ./deploy/charts/ -n baumanec -f ./deploy/charts/values_baumanec-call-2026.yaml
+k8s_boxed-bots
+helm upgrade --install --debug dev-ops-it-2026 ./deploy/charts/ -n public -f ./deploy/charts/values_dev-ops-it-2026.yaml
 ```
